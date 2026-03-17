@@ -1,5 +1,9 @@
 <div align="center">
-  <img src="public/logo.svg" alt="TraceAtlas Logo" width="120" height="120"/>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="public/logo.svg"/>
+    <source media="(prefers-color-scheme: light)" srcset="public/logo-light.svg"/>
+    <img src="public/logo.svg" alt="TraceAtlas Logo" width="120" height="120"/>
+  </picture>
   <h1>TraceAtlas</h1>
   <p><strong>Visualize how your internet traffic travels — hop by hop, country by country, across the globe.</strong></p>
 
