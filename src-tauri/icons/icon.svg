@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <!-- Background radial gradient -->
+    <radialGradient id="bgGrad" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" stop-color="#0d2040"/>
+      <stop offset="100%" stop-color="#050d1a"/>
+    </radialGradient>
+
+    <!-- Globe surface gradient -->
+    <radialGradient id="globeGrad" cx="42%" cy="38%" r="58%">
+      <stop offset="0%" stop-color="#0f2a4a"/>
+      <stop offset="100%" stop-color="#061526"/>
+    </radialGradient>
+
+    <!-- Arc glow filter -->
+    <filter id="arcGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Dot glow filter -->
+    <filter id="dotGlow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Clip globe content to circle -->
+    <clipPath id="globeClip">
+      <circle cx="512" cy="512" r="375"/>
+    </clipPath>
+  </defs>
+
+  <!-- Outer background circle -->
+  <circle cx="512" cy="512" r="490" fill="url(#bgGrad)"/>
+
+  <!-- Globe body -->
+  <circle cx="512" cy="512" r="375" fill="url(#globeGrad)"/>
+
+  <!-- Globe wireframe (clipped to globe circle) -->
+  <g clip-path="url(#globeClip)" stroke="#1e4060" stroke-width="5" fill="none" opacity="0.85">
+    <!-- Outer circle (equator band) -->
+    <circle cx="512" cy="512" r="375"/>
+
+    <!-- Equator (horizontal ellipse) -->
+    <ellipse cx="512" cy="512" rx="375" ry="90"/>
+
+    <!-- Latitude lines -->
+    <ellipse cx="512" cy="390" rx="345" ry="68"/>
+    <ellipse cx="512" cy="634" rx="345" ry="68"/>
+    <ellipse cx="512" cy="278" rx="255" ry="46"/>
+    <ellipse cx="512" cy="746" rx="255" ry="46"/>
+
+    <!-- Longitude lines (vertical ellipses) -->
+    <ellipse cx="512" cy="512" rx="90" ry="375"/>
+    <ellipse cx="512" cy="512" rx="200" ry="375"/>
+    <ellipse cx="512" cy="512" rx="330" ry="375"/>
+  </g>
+
+  <!-- Globe outer ring (sharper edge) -->
+  <circle cx="512" cy="512" r="375" fill="none" stroke="#1e4a70" stroke-width="3"/>
+
+  <!-- ── Route Arc (glow layers, outer to inner) ────────────── -->
+  <!-- Layer 5: widest outer glow -->
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#38bdf8" stroke-width="28" stroke-linecap="round" opacity="0.10"
+    filter="url(#arcGlow)"/>
+  <!-- Layer 4 -->
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#38bdf8" stroke-width="18" stroke-linecap="round" opacity="0.22"/>
+  <!-- Layer 3 -->
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#7dd3fc" stroke-width="11" stroke-linecap="round" opacity="0.45"/>
+  <!-- Layer 2 -->
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#bae6fd" stroke-width="6" stroke-linecap="round" opacity="0.75"/>
+  <!-- Layer 1: bright core -->
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#e0f7ff" stroke-width="3" stroke-linecap="round" opacity="0.95"/>
+
+  <!-- ── Hop dots ─────────────────────────────────────────── -->
+
+  <!-- Source dot (bottom-left) -->
+  <g filter="url(#dotGlow)">
+    <circle cx="218" cy="680" r="30" fill="#38bdf8" opacity="0.18"/>
+    <circle cx="218" cy="680" r="20" fill="#38bdf8" opacity="0.35"/>
+    <circle cx="218" cy="680" r="12" fill="#7dd3fc" opacity="0.75"/>
+    <circle cx="218" cy="680" r="7"  fill="#e0f7ff" opacity="1"/>
+  </g>
+
+  <!-- Mid hop dot (top-center, on arc midpoint ~M 512 330) -->
+  <g filter="url(#dotGlow)">
+    <circle cx="510" cy="328" r="26" fill="#38bdf8" opacity="0.18"/>
+    <circle cx="510" cy="328" r="17" fill="#38bdf8" opacity="0.35"/>
+    <circle cx="510" cy="328" r="10" fill="#7dd3fc" opacity="0.75"/>
+    <circle cx="510" cy="328" r="6"  fill="#e0f7ff" opacity="1"/>
+  </g>
+
+  <!-- Destination dot (right) -->
+  <g filter="url(#dotGlow)">
+    <circle cx="806" cy="412" r="30" fill="#38bdf8" opacity="0.18"/>
+    <circle cx="806" cy="412" r="20" fill="#38bdf8" opacity="0.35"/>
+    <circle cx="806" cy="412" r="12" fill="#7dd3fc" opacity="0.75"/>
+    <circle cx="806" cy="412" r="7"  fill="#e0f7ff" opacity="1"/>
+  </g>
+
+  <!-- Subtle outer ring to finish the icon -->
+  <circle cx="512" cy="512" r="490" fill="none" stroke="#1a3a5c" stroke-width="4" opacity="0.6"/>
+</svg>

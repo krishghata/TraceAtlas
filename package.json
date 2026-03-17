@@ -1,0 +1,21 @@
+{
+  "name": "traceatlas",
+  "version": "1.0.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "tauri": "tauri"
+  },
+  "dependencies": {
+    "vue": "^3.4.0",
+    "leaflet": "^1.9.4",
+    "html2canvas": "^1.4.1",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-sql": "^2"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "@vitejs/plugin-vue": "^4.0.0",
+    "@tauri-apps/cli": "^2"
+  }
+}
