@@ -56,6 +56,16 @@ Cargo automatically downloads Rust crates on first build. No manual step needed.
 
 ---
 
+## Updating the App Icon
+
+Icon files are committed to the repo (`src-tauri/icons/`). If you replace `src-tauri/icons/icon.svg` with a new logo, regenerate all sizes with:
+```bash
+npm run icons
+```
+This produces PNG, ICO, ICNS, and platform-specific variants (Windows APPX tiles, iOS, Android) from the single SVG source.
+
+---
+
 ## Running in Development
 
 ```bash

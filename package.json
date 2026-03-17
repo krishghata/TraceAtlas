@@ -4,7 +4,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "icons": "tauri icon src-tauri/icons/icon.svg"
   },
   "dependencies": {
     "vue": "^3.4.0",
