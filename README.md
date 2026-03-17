@@ -1,14 +1,43 @@
-# TraceAtlas
+<div align="center">
+  <img src="public/logo.svg" alt="TraceAtlas Logo" width="120" height="120"/>
+  <h1>TraceAtlas</h1>
+  <p><strong>Visualize how your internet traffic travels — hop by hop, country by country, across the globe.</strong></p>
 
-**Visualize how your internet traffic travels from your machine to any destination**
+  <p>
+    <img alt="Tauri" src="https://img.shields.io/badge/Tauri_2-0a0f1e?logo=tauri&logoColor=38bdf8"/>
+    <img alt="Vue 3" src="https://img.shields.io/badge/Vue_3-0a0f1e?logo=vue.js&logoColor=38bdf8"/>
+    <img alt="Leaflet" src="https://img.shields.io/badge/Leaflet-0a0f1e?logo=leaflet&logoColor=38bdf8"/>
+    <img alt="Rust" src="https://img.shields.io/badge/Rust-0a0f1e?logo=rust&logoColor=38bdf8"/>
+    <img alt="License" src="https://img.shields.io/badge/License-MIT-0a0f1e?logoColor=38bdf8"/>
+  </p>
+</div>
 
-TraceAtlas is a desktop application that runs real `traceroute` on your machine, geo-enriches every hop, and renders the path as an interactive animated map — with insights, submarine cable overlays, and latency heatmaps.
+---
+
+## Screenshots
+
+> *Screenshots coming soon*
+
+| Landing | Trace in progress | Results |
+|---------|------------------|---------|
+| ![Landing screen](docs/screenshots/landing.png) | ![Tracing](docs/screenshots/tracing.png) | ![Results map](docs/screenshots/results.png) |
+
+| Hop list | Insights panel | Submarine cables |
+|----------|---------------|-----------------|
+| ![Hop list](docs/screenshots/hoplist.png) | ![Insights](docs/screenshots/insights.png) | ![Cables overlay](docs/screenshots/cables.png) |
 
 ---
 
 ## Why Desktop?
 
-Traceroute must run on the user's own machine to show the *actual* path their traffic takes. A server-side approach would show the server's path, not yours. TraceAtlas is built with **Tauri** — a Rust + WebView framework that gives a native desktop experience with a ~10–15 MB installer (no bundled Chromium).
+Traceroute must run on **your machine** to show your actual network path. A server-side approach traces the server's route, not yours. TraceAtlas is built with **Tauri** — a Rust + OS WebView framework with a ~10–15 MB installer and no bundled Chromium.
+
+| | Tauri (TraceAtlas) | Electron | Web App |
+|--|-------------------|----------|---------|
+| Installer size | ~10–15 MB | ~150 MB | N/A |
+| RAM usage | ~30–60 MB | ~200 MB | N/A |
+| Traceroute accuracy | Your path ✅ | Your path ✅ | Server's path ❌ |
+| WebView | OS native | Bundled Chromium | Browser |
 
 ---
 
@@ -17,122 +46,58 @@ Traceroute must run on the user's own machine to show the *actual* path their tr
 ### Map & Visualization
 - Global Leaflet map with dark tile theme
 - Animated packet movement along the route (auto-play + step-by-step)
-- Curved arc paths between hops (arc height scales with distance)
+- Curved arc paths between hops — arc height scales with distance
 - Glow polyline rendering (multi-layer neon effect)
 - Auto-zoom to fit the full route
-- Latency heatmap — hop markers colored green → yellow → red by latency
+- Latency heatmap — hop markers colored green → yellow → red
 - Submarine cable overlay (708 real cables from TeleGeography, toggle on/off)
 
-### Insights Engine (rule-based, no AI API)
-- Story — plain-English summary of the route
-- Country transitions — every border crossing detected
-- Total distance — haversine-calculated with fun facts
-- Latency spike detection — flags jumps > 50ms
-- Bottleneck — identifies the single slowest hop
-- Ocean crossing heuristic — country change + distance > 3,000 km
+### Insights Engine
+- **Story** — plain-English summary of the route
+- **Country transitions** — every border crossing detected
+- **Total distance** — haversine-calculated with fun facts
+- **Latency spike detection** — flags jumps > 50ms
+- **Bottleneck** — identifies the single slowest hop
+- **Ocean crossing heuristic** — country change + distance > 3,000 km
 
 ### UI Panels
 - **Summary bar** — hops, countries, distance, max latency, source/destination IPs
-- **Hop list** — per-hop: number, country, IP, org, latency (color-coded)
+- **Hop list** — per-hop: number, country flag, IP, org, latency (color-coded)
 - **Insights panel** — all insight cards
-- Step-by-step hop playback (◀ ▶ buttons)
-- Replay animation
+- Step-by-step hop playback (◀ ▶), replay animation
 - Export trace as JSON
 - Screenshot capture (PNG)
 
 ### Data & Caching
 - SQLite database persisted in OS app-data folder
-- `ip_cache` — geo results cached 30 days, avoids repeated API calls
-- `trace_cache` — full trace results cached 1 hour
-- Geo: ip-api.com batch API (free, 45 req/min) with SQLite as local cache
-
----
-
-## Architecture
-
-```
-┌─────────────────────────────────────────┐
-│  Vue 3 + Leaflet (WebView renderer)     │
-│  All logic runs here as JavaScript:     │
-│  • traceroute output parsing            │
-│  • geo enrichment (ip-api.com + SQLite) │
-│  • insights generation                  │
-│  • map rendering + animation            │
-├─────────────────────────────────────────┤
-│  Tauri Rust layer (thin OS bridge)      │
-│  • run_traceroute command               │
-│    → executes tracert/traceroute        │
-│    → returns raw output + platform flag │
-│  • @tauri-apps/plugin-sql (SQLite)      │
-├─────────────────────────────────────────┤
-│  OS WebView2 (Windows) / WebKit (macOS) │
-│  Pre-installed — not bundled            │
-└─────────────────────────────────────────┘
-```
-
----
-
-## Project Structure
-
-```
-TraceAtlas_v6_1/
-├── src-tauri/                  ← Rust / Tauri config
-│   ├── Cargo.toml
-│   ├── build.rs
-│   ├── tauri.conf.json
-│   ├── capabilities/
-│   │   └── default.json
-│   └── src/
-│       ├── main.rs             ← entry point
-│       └── lib.rs              ← run_traceroute command (~30 lines)
-│
-├── src/                        ← Vue 3 frontend
-│   ├── lib/                    ← business logic (JS)
-│   │   ├── db.js               ← SQLite via Tauri SQL plugin
-│   │   ├── geo.js              ← ip-api.com + cache
-│   │   ├── traceroute.js       ← parsing, dedup, IP filter
-│   │   └── insights.js         ← all insight rules
-│   ├── components/
-│   │   ├── Landing.vue
-│   │   ├── AppView.vue         ← orchestration + toolbar
-│   │   ├── MapView.vue         ← Leaflet map + animation
-│   │   ├── HopList.vue
-│   │   ├── SummaryPanel.vue
-│   │   └── InsightsPanel.vue
-│   ├── main.js
-│   └── App.vue
-│
-├── public/
-│   └── data/
-│       └── cables.geojson      ← 708 TeleGeography submarine cables
-│
-├── docs/
-│   ├── SETUP.md
-│   ├── SPEC_KIT.md
-│   └── PROJECT_NOTES.md
-│
-├── index.html
-├── vite.config.js
-└── package.json
-```
+- `ip_cache` — geo results cached 30 days
+- `trace_cache` — full trace results cached 1 hour, no repeated traceroutes
 
 ---
 
 ## How It Works
 
-1. User enters a domain or IP and clicks **Trace**
-2. Tauri calls `run_traceroute` (Rust) → executes `tracert`/`traceroute` on the user's machine
-3. Raw output is parsed in JavaScript → private IPs filtered → duplicates removed
-4. All public hop IPs are batch geo-enriched via ip-api.com → results cached in SQLite
-5. Insights are generated (rule-based, no AI)
-6. Map renders with glow arcs, heatmap markers, and cable overlay
-7. Packet animation plays automatically; step-by-step controls available
+```
+User enters domain / IP
+         ↓
+Tauri invoke('run_traceroute')
+         ↓
+Rust executes tracert / traceroute on user's machine
+         ↓
+JS: parse → filter private IPs → deduplicate hops
+         ↓
+JS: batch geo-enrich via ip-api.com (SQLite cache)
+         ↓
+JS: generate insights (rule-based, no AI API)
+         ↓
+Vue: render map + animation + panels
+```
 
 ---
 
 ## Quick Start
 
-See [docs/SETUP.md](docs/SETUP.md) for full setup instructions.
+See [docs/SETUP.md](docs/SETUP.md) for full prerequisites and setup.
 
 ```bash
 # Install dependencies
@@ -147,13 +112,72 @@ npm run tauri build
 
 ---
 
+## Architecture
+
+```
+┌─────────────────────────────────────────┐
+│  Vue 3 + Leaflet (WebView renderer)     │
+│  • traceroute output parsing            │
+│  • geo enrichment (ip-api.com + SQLite) │
+│  • insights generation                  │
+│  • map rendering + animation            │
+├─────────────────────────────────────────┤
+│  Tauri Rust layer (~30 lines)           │
+│  • run_traceroute → tracert/traceroute  │
+│  • @tauri-apps/plugin-sql (SQLite)      │
+├─────────────────────────────────────────┤
+│  OS WebView — pre-installed, not bundled│
+│  Windows: WebView2  macOS: WebKit       │
+│  Linux: WebKitGTK                       │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## Project Structure
+
+```
+TraceAtlas/
+├── src-tauri/                  ← Rust / Tauri config
+│   ├── src/lib.rs              ← run_traceroute command (~30 lines)
+│   ├── Cargo.toml
+│   ├── tauri.conf.json
+│   ├── capabilities/default.json
+│   └── icons/                  ← app icons (all platforms)
+│
+├── src/                        ← Vue 3 frontend
+│   ├── lib/
+│   │   ├── db.js               ← SQLite via Tauri SQL plugin
+│   │   ├── geo.js              ← ip-api.com + SQLite cache
+│   │   ├── traceroute.js       ← parsing, dedup, IP filter
+│   │   └── insights.js         ← all insight rules
+│   └── components/
+│       ├── Landing.vue
+│       ├── AppView.vue         ← orchestration + toolbar
+│       ├── MapView.vue         ← Leaflet map + animation
+│       ├── HopList.vue
+│       ├── SummaryPanel.vue
+│       └── InsightsPanel.vue
+│
+├── public/
+│   ├── logo.svg                ← app logo
+│   └── data/cables.geojson    ← 708 TeleGeography submarine cables
+│
+└── docs/
+    ├── SETUP.md
+    ├── SPEC_KIT.md
+    └── PROJECT_NOTES.md
+```
+
+---
+
 ## Limitations
 
-- IP geolocation is approximate (city-level accuracy not guaranteed)
+- IP geolocation is approximate — city-level accuracy not guaranteed
 - Some hops timeout or are hidden by firewalls (`* * *`)
 - Undersea cable detection is heuristic (country change + distance > 3,000 km)
-- Traceroute path is a snapshot — routing changes dynamically
-- ip-api.com free tier: 45 requests/minute (SQLite cache keeps actual usage very low)
+- Traceroute path is a snapshot — internet routing changes dynamically
+- Not available on mobile (traceroute requires OS-level command execution)
 
 ---
 
@@ -163,17 +187,17 @@ npm run tauri build
 - 3D globe visualization (WebGL / Three.js)
 - ASN / ISP graph
 - Route anomaly detection
-- Curved Bezier arcs (currently great-circle arc interpolation)
-- Real-time latency heatmap
+- Real-time latency heatmap over time
 - BGP dataset integration
 
 ---
 
-## Philosophy
+## License
 
-> TraceAtlas is not about perfect accuracy.
-> It is about making the invisible internet **visible, understandable, and engaging**.
+MIT © [Krishnendu Ghata](https://github.com/krishghata)
 
 ---
 
-*Built with Tauri, Vue 3, Leaflet, and ip-api.com*
+<div align="center">
+  <sub>Built with Tauri · Vue 3 · Leaflet · Rust · ip-api.com</sub>
+</div>

@@ -29,17 +29,26 @@ rustc --version   # rustc 1.7x.x
 cargo --version
 ```
 
-### 3. WebView2 (Windows only)
-Pre-installed on Windows 10 (v1803+) and Windows 11. No action needed.
+### 3. WebView (platform-specific)
 
-If missing: download from [Microsoft WebView2](https://developer.microsoft.com/en-us/microsoft-edge/webview2/)
+Tauri uses the OS-native WebView — nothing to install on any platform:
 
-### 4. Microsoft C++ Build Tools (Windows only)
+| Platform | WebView engine | Status |
+|----------|---------------|--------|
+| Windows 10/11 | WebView2 (Chromium-based, Microsoft) | Pre-installed |
+| macOS | WebKit (Safari engine, Apple) | Pre-installed |
+| Linux | WebKitGTK | Usually pre-installed; if missing: `sudo apt install libwebkit2gtk-4.1-dev` |
+
+> This is why Tauri's installer is ~10–15 MB — it ships no browser engine, it uses whatever the OS already has.
+
+### 4. Microsoft C++ Build Tools (Windows only, for building from source)
 Required for compiling Rust crates with native components.
 
 Download from [visualstudio.microsoft.com/visual-cpp-build-tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/)
 
 Select: **Desktop development with C++**
+
+> Not needed by end users running the installer — only required when building the app from source.
 
 ---
 
