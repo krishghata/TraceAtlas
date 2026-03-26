@@ -24,6 +24,14 @@
       "csp": null
     }
   },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDgwNUM2OERENDUwNDg0OTYKUldTV2hBUkYzV2hjZ0NWK2djYzRGdGZ2SmpQVVNPaytlZW56SHFObjZtMURkYU9CNWpvRlZKVGkK",
+      "endpoints": [
+        "https://github.com/krishghata/TraceAtlas/releases/latest/download/latest.json"
+      ]
+    }
+  },
   "bundle": {
     "active": true,
     "targets": "all",
