@@ -103,15 +103,35 @@ jobs:
             ## TraceAtlas ${{ github.ref_name }}
 
             ### Downloads
-            | Platform | File |
-            |----------|------|
-            | Windows  | `.msi` (recommended) or `.exe` (NSIS) |
-            | macOS    | `.dmg` (universal — runs on both Intel and Apple Silicon) |
-            | Linux    | `.AppImage` (portable) or `.deb` (Debian/Ubuntu) |
+            | Platform | File | Notes |
+            |----------|------|-------|
+            | Windows  | `TraceAtlas_*_x64_en-US.msi` | Recommended installer |
+            | Windows  | `TraceAtlas_*_x64-setup.exe` | NSIS installer |
+            | Windows  | `TraceAtlas_*_x64_portable.zip` | **No installation needed** — extract & run |
+            | macOS    | `TraceAtlas_*.dmg` | Universal (Intel + Apple Silicon) |
+            | Linux    | `TraceAtlas_*.AppImage` | Portable — just make executable and run |
+            | Linux    | `TraceAtlas_*.deb` | Debian/Ubuntu installer |
+
+            > **Windows portable note:** Requires WebView2 (pre-installed on Windows 10 20H2+ and Windows 11).
 
             ### What's new
             _See commits since last release._
-          releaseDraft: true      # → creates a draft; you publish it manually
+          releaseDraft: true
           prerelease: false
           tauriScript: npm run tauri
           args: ${{ matrix.args }}
+
+      # ── Windows portable zip ───────────────────────────────────────────────
+      # Takes the raw compiled exe (no installer) and zips it for portable use.
+      # WebView2 is pre-installed on Windows 10 20H2+ and Windows 11.
+      - name: Package and upload portable exe
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $version = "${{ github.ref_name }}".TrimStart('v')
+          $src     = "src-tauri\target\release\traceatlas.exe"
+          $zip     = "TraceAtlas_${version}_x64_portable.zip"
+          Compress-Archive -Path $src -DestinationPath $zip
+          gh release upload ${{ github.ref_name }} $zip --clobber
