@@ -1,6 +1,6 @@
 
 <template>
-<div id="traceatlas-app" style="background:#0a0f1e;min-height:100vh;color:white;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column">
+<div id="traceatlas-app" style="background:#0a0f1e;flex:1;color:white;font-family:'Segoe UI',sans-serif;display:flex;flex-direction:column;overflow:hidden">
 
   <!-- ── Toolbar ──────────────────────────────────────────────────────────── -->
   <div style="padding:10px 14px;display:flex;align-items:center;gap:8px;background:#0d1b2a;border-bottom:1px solid #1e3a5f;flex-shrink:0">
