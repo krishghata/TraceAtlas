@@ -7,13 +7,14 @@
 import { onMounted, onUnmounted, watch } from 'vue'
 import L from 'leaflet'
 
-const props  = defineProps({ data: Object, showCables: Boolean })
+const props  = defineProps({ data: Object, showCables: Boolean, showCableRoute: Boolean })
 const emit   = defineEmits(['hopChange'])
 
-let map, packetMarker, routeLayer, cablesLayer
+let map, packetMarker, routeLayer, cablesLayer, cableRouteLayer
 let animInterval = null
 let coords       = []   // [[lat, lon], ...]
 let stepIndex    = 0
+let cablesGeojson = null  // kept for cable-route matching
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -53,6 +54,90 @@ function latencyColor(latency, min, max) {
   return `rgb(255,${g},40)`
 }
 
+// ── Cable route proximity matching ────────────────────────────────────────────
+
+/** Min distance from a point to any vertex of a cable's coordinate list. */
+function minDistToCable(lat, lon, cableCoords) {
+  let minD = Infinity
+  for (const [clon, clat] of cableCoords) {
+    const d = haversine(lat, lon, clat, clon)
+    if (d < minD) minD = d
+  }
+  return minD
+}
+
+/**
+ * Find the cable in geojson whose path most closely connects h1→h2.
+ * Scores each cable by summing min-distance from hop1, hop2, and midpoint.
+ * Returns null if no cable is within a reasonable threshold.
+ */
+function findNearestCable(lat1, lon1, lat2, lon2, geojson) {
+  const midLat = (lat1 + lat2) / 2
+  const midLon = (lon1 + lon2) / 2
+  let best = null
+  let bestScore = Infinity
+
+  for (const feature of geojson.features) {
+    if (!feature.geometry) continue
+    let cableCoords = null
+    if (feature.geometry.type === 'LineString') {
+      cableCoords = feature.geometry.coordinates
+    } else if (feature.geometry.type === 'MultiLineString') {
+      cableCoords = feature.geometry.coordinates.flat()
+    }
+    if (!cableCoords || cableCoords.length === 0) continue
+
+    const score = minDistToCable(lat1, lon1, cableCoords)
+                + minDistToCable(lat2, lon2, cableCoords)
+                + minDistToCable(midLat, midLon, cableCoords)
+
+    if (score < bestScore) {
+      bestScore = score
+      best = { feature, score }
+    }
+  }
+
+  // Accept only if average per-point distance < 800 km
+  return best && bestScore / 3 < 800 ? best : null
+}
+
+/** Draw (or clear) the cable-route highlight layer. */
+function drawCableRoute() {
+  if (cableRouteLayer) { cableRouteLayer.remove(); cableRouteLayer = null }
+  if (!props.showCableRoute || !cablesGeojson || !props.data) return
+
+  cableRouteLayer = L.layerGroup().addTo(map)
+  const hops = props.data.hops
+  const seen = new Set()
+
+  for (let i = 1; i < hops.length; i++) {
+    const h1 = hops[i - 1]
+    const h2 = hops[i]
+    const dist = haversine(h1.lat, h1.lon, h2.lat, h2.lon)
+    if (dist < 500) continue   // short hops don't need undersea cables
+
+    const match = findNearestCable(h1.lat, h1.lon, h2.lat, h2.lon, cablesGeojson)
+    if (!match) continue
+
+    const name = match.feature.properties?.name
+               || match.feature.properties?.cable
+               || 'Unknown cable'
+    if (seen.has(name)) continue
+    seen.add(name)
+
+    // Draw glow + highlight line for matched cable
+    L.geoJSON(match.feature, {
+      style: { color: '#f59e0b', weight: 5, opacity: 0.15 }
+    }).addTo(cableRouteLayer)
+
+    L.geoJSON(match.feature, {
+      style: { color: '#fbbf24', weight: 2.5, opacity: 0.9 }
+    })
+      .bindPopup(`<b>${name}</b><br><span style="color:#94a3b8">Nearest submarine cable</span>`)
+      .addTo(cableRouteLayer)
+  }
+}
+
 // ── Lifecycle ─────────────────────────────────────────────────────────────────
 
 onMounted(async () => {
@@ -64,9 +149,9 @@ onMounted(async () => {
 
   // Load submarine cable overlay
   try {
-    const res     = await fetch('/data/cables.geojson')
-    const geojson = await res.json()
-    cablesLayer   = L.geoJSON(geojson, {
+    const res  = await fetch('/data/cables.geojson')
+    cablesGeojson = await res.json()
+    cablesLayer   = L.geoJSON(cablesGeojson, {
       style: { color: '#f97316', weight: 1.2, opacity: 0.45 }
     })
     if (props.showCables) cablesLayer.addTo(map)
@@ -87,12 +172,17 @@ watch(() => props.data, d => {
   coords = d.hops.map(h => [h.lat, h.lon])
   stepIndex = 0
   drawRoute()
+  drawCableRoute()
   replay()
 })
 
 watch(() => props.showCables, show => {
   if (!cablesLayer) return
   show ? cablesLayer.addTo(map) : cablesLayer.remove()
+})
+
+watch(() => props.showCableRoute, () => {
+  drawCableRoute()
 })
 
 // ── Drawing ───────────────────────────────────────────────────────────────────

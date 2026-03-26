@@ -1,8 +1,7 @@
 
 <template>
-<div style="padding:10px 16px;background:#0f172a;border-bottom:1px solid #1e3a5f;font-family:sans-serif;color:white;min-height:44px;display:flex;align-items:center">
-  <div v-if="!data" style="color:#475569;font-size:13px">Enter a domain or IP above and click Trace</div>
-  <div v-else style="display:flex;gap:28px;flex-wrap:wrap;font-size:13px;align-items:center">
+<div v-if="data" style="padding:10px 16px;background:#0f172a;border-bottom:1px solid #1e3a5f;font-family:sans-serif;color:white;display:flex;align-items:center">
+  <div style="display:flex;gap:28px;flex-wrap:wrap;font-size:13px;align-items:center">
 
     <div>
       <span style="color:#475569;font-size:11px;text-transform:uppercase;letter-spacing:.05em">Hops</span>

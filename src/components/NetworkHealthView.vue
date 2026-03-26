@@ -8,10 +8,23 @@
       <h2 style="margin:0;font-size:16px;font-weight:700;color:#e2e8f0">Network Health Check</h2>
       <p style="margin:4px 0 0;font-size:12px;color:#475569">Pings each layer independently — local network → ISP → internet → DNS</p>
     </div>
-    <button @click="runCheck" :disabled="running"
-      :style="`padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:${running?'default':'pointer'};color:white;background:${running?'#1e3a5f':'#1d4ed8'}`">
-      {{ running ? 'Checking…' : layers.length ? '↺ Re-run' : '▶ Run Diagnosis' }}
-    </button>
+    <div style="display:flex;align-items:center;gap:8px">
+      <select v-model="autoInterval" @change="onIntervalChange"
+        style="padding:6px 10px;background:#0d1b2a;border:1px solid #1e3a5f;border-radius:6px;color:#94a3b8;font-size:12px;cursor:pointer">
+        <option value="0">Auto-run: Off</option>
+        <option value="30">Every 30s</option>
+        <option value="60">Every 1 min</option>
+        <option value="300">Every 5 min</option>
+        <option value="600">Every 10 min</option>
+      </select>
+      <span v-if="autoInterval > 0 && nextRunIn > 0" style="font-size:11px;color:#334155;white-space:nowrap">
+        next in {{ nextRunIn }}s
+      </span>
+      <button @click="runCheck" :disabled="running"
+        :style="`padding:8px 20px;border:none;border-radius:6px;font-size:13px;font-weight:600;cursor:${running?'default':'pointer'};color:white;background:${running?'#1e3a5f':'#1d4ed8'}`">
+        {{ running ? 'Checking…' : layers.length ? '↺ Re-run' : '▶ Run Diagnosis' }}
+      </button>
+    </div>
   </div>
 
   <!-- ── Empty state ─────────────────────────────────────────────────────── -->
@@ -254,7 +267,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { invoke } from '@tauri-apps/api/core'
 import { parsePingOutput, rttColor } from '../lib/ping.js'
 
@@ -264,9 +277,42 @@ const NODE_R     = 28    // topology node radius
 const NODE_GAP   = 4     // gap between ring edge and line end
 
 // ── State ────────────────────────────────────────────────────────────────────
-const running   = ref(false)
-const layers    = ref([])
-const diagnosis = ref(null)
+const running       = ref(false)
+const layers        = ref([])
+const diagnosis     = ref(null)
+const autoInterval  = ref(0)    // seconds; 0 = off
+const nextRunIn     = ref(0)
+
+let autoTimer    = null
+let countdownTimer = null
+
+function clearAutoTimers() {
+  if (autoTimer)     { clearTimeout(autoTimer);    autoTimer     = null }
+  if (countdownTimer){ clearInterval(countdownTimer); countdownTimer = null }
+  nextRunIn.value = 0
+}
+
+function scheduleNext() {
+  clearAutoTimers()
+  const secs = parseInt(autoInterval.value, 10)
+  if (!secs) return
+  nextRunIn.value = secs
+  countdownTimer = setInterval(() => {
+    nextRunIn.value = Math.max(0, nextRunIn.value - 1)
+  }, 1000)
+  autoTimer = setTimeout(() => {
+    clearInterval(countdownTimer)
+    countdownTimer = null
+    runCheck().then(() => scheduleNext())
+  }, secs * 1000)
+}
+
+function onIntervalChange() {
+  clearAutoTimers()
+  if (parseInt(autoInterval.value, 10) > 0) scheduleNext()
+}
+
+onUnmounted(() => clearAutoTimers())
 
 // ── Topology nodes & lines ───────────────────────────────────────────────────
 const statusOrder = ['down', 'degraded', 'checking', 'ok']

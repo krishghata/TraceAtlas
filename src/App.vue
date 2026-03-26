@@ -41,28 +41,38 @@
   </div>
 
   <!-- ── Active view fills remaining space ──────────────────────────────── -->
-  <AppView           v-if="activeTab === 'trace'"  />
-  <PingView          v-else-if="activeTab === 'ping'"   />
-  <NetworkHealthView v-else-if="activeTab === 'health'" />
+  <!-- KeepAlive preserves component state across tab switches -->
+  <KeepAlive>
+    <component :is="activeComponent" />
+  </KeepAlive>
 
 </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import Landing           from './components/Landing.vue'
 import AppView           from './components/AppView.vue'
 import PingView          from './components/PingView.vue'
 import NetworkHealthView from './components/NetworkHealthView.vue'
+import SpeedTestView     from './components/SpeedTestView.vue'
 import { check } from '@tauri-apps/plugin-updater'
 
 const page      = ref('home')
 const activeTab = ref('trace')
 
+const activeComponent = computed(() => ({
+  trace:  AppView,
+  ping:   PingView,
+  health: NetworkHealthView,
+  speed:  SpeedTestView,
+})[activeTab.value])
+
 const tabs = [
   { id: 'trace',  label: '⤷ Traceroute'     },
   { id: 'ping',   label: '📡 Ping'           },
   { id: 'health', label: '🩺 Network Health' },
+  { id: 'speed',  label: '⚡ Speed Test'     },
 ]
 
 // ── Auto-updater ─────────────────────────────────────────────────────────────

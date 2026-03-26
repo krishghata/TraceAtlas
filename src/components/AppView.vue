@@ -35,6 +35,10 @@
       <input type="checkbox" v-model="showCables" style="accent-color:#38bdf8"/> Cables
     </label>
 
+    <label style="font-size:12px;color:#64748b;display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer">
+      <input type="checkbox" v-model="showCableRoute" style="accent-color:#f59e0b"/> Cable Route
+    </label>
+
     <button @click="exportJSON" :disabled="!data"
       style="padding:7px 12px;background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:6px;font-size:12px;cursor:pointer;white-space:nowrap">
       ⬇ JSON
@@ -58,7 +62,7 @@
   <!-- ── Main content ─────────────────────────────────────────────────────── -->
   <div style="display:flex;flex:1;overflow:hidden">
     <HopList :hops="data?.hops" />
-    <MapView :data="data" :showCables="showCables" ref="mapRef" @hopChange="currentHop = $event" />
+    <MapView :data="data" :showCables="showCables" :showCableRoute="showCableRoute" ref="mapRef" @hopChange="currentHop = $event" />
     <InsightsPanel :insights="data?.insights" />
   </div>
 
@@ -80,9 +84,10 @@ import { batchResolveGeo, getSourceLocation }            from '../lib/geo.js'
 import { generateInsights }                              from '../lib/insights.js'
 import { getDb }                                         from '../lib/db.js'
 
-const data       = ref(null)
-const mapRef     = ref(null)
-const showCables = ref(false)
+const data            = ref(null)
+const mapRef          = ref(null)
+const showCables      = ref(false)
+const showCableRoute  = ref(false)
 const target     = ref('')
 const loading    = ref(false)
 const error      = ref(null)

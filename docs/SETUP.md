@@ -164,6 +164,11 @@ To reset the cache: delete the `.db` file and relaunch.
 - Check internet connection
 - Previously looked-up IPs will still resolve from SQLite cache
 
+### Speed test shows 0 Mbps or fails
+- The speed test uses Cloudflare's `speed.cloudflare.com` endpoints — ensure internet access is available
+- Corporate proxies or firewalls may block the test URLs
+- Results reflect real-time conditions; run again for a fresh measurement
+
 ### First build is very slow
 - Normal — Rust crates compile from source on first build
 - Subsequent builds only recompile changed files
@@ -179,25 +184,40 @@ To reset the cache: delete the `.db` file and relaunch.
 
 ```
 TraceAtlas_v6_1/
-├── src-tauri/          ← Rust / Tauri config
-│   ├── Cargo.toml      ← Rust dependencies
-│   ├── tauri.conf.json ← app config (name, window size, etc.)
-│   ├── capabilities/   ← permission declarations
+├── src-tauri/                  ← Rust / Tauri config
+│   ├── Cargo.toml              ← Rust dependencies
+│   ├── tauri.conf.json         ← app config (name, window size, updater, etc.)
+│   ├── capabilities/           ← permission declarations
 │   └── src/
-│       ├── main.rs     ← app entry point
-│       └── lib.rs      ← run_traceroute Rust command
+│       ├── main.rs             ← app entry point
+│       └── lib.rs              ← run_traceroute, run_ping, get_default_gateway
 │
-├── src/                ← Vue 3 frontend
-│   ├── lib/            ← JS business logic
-│   │   ├── db.js       ← SQLite helpers
-│   │   ├── geo.js      ← IP geolocation + caching
-│   │   ├── traceroute.js ← output parsing
-│   │   └── insights.js ← insights engine
-│   └── components/     ← Vue components
+├── src/                        ← Vue 3 frontend
+│   ├── App.vue                 ← tab bar, KeepAlive, auto-updater banner
+│   ├── lib/                    ← JS business logic
+│   │   ├── db.js               ← SQLite helpers
+│   │   ├── geo.js              ← IP geolocation + caching
+│   │   ├── traceroute.js       ← output parsing
+│   │   ├── insights.js         ← insights engine
+│   │   └── ping.js             ← RTT parsing, color mapping, jitter
+│   └── components/             ← Vue components
+│       ├── Landing.vue         ← splash screen
+│       ├── AppView.vue         ← Traceroute tab
+│       ├── MapView.vue         ← Leaflet map + cable route
+│       ├── HopList.vue
+│       ├── SummaryPanel.vue
+│       ├── InsightsPanel.vue
+│       ├── PingView.vue        ← Ping tab
+│       ├── NetworkHealthView.vue ← Network Health tab
+│       └── SpeedTestView.vue   ← Speed Test tab
 │
-├── public/data/
-│   └── cables.geojson  ← submarine cable overlay data
+├── public/
+│   ├── logo.svg                ← dark logo
+│   ├── logo-light.svg          ← light logo (splash + README)
+│   └── data/cables.geojson    ← submarine cable overlay data
 │
+├── .github/workflows/
+│   └── release.yml             ← CI: builds Windows/macOS/Linux + GitHub Release
 ├── index.html
 ├── vite.config.js
 └── package.json

@@ -1,6 +1,6 @@
 
 <template>
-<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:14px;gap:12px;box-sizing:border-box;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
+<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;padding:10px 14px;gap:8px;box-sizing:border-box;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
 
   <!-- ── Controls ────────────────────────────────────────────────────────── -->
   <div style="display:flex;gap:8px;align-items:center;flex-shrink:0">
@@ -221,7 +221,7 @@ const xLabels = computed(() => {
   const vis = visible.value
   const base = packets.value.length - vis.length  // seq offset
   return vis
-    .map((p, i) => ({ seq: base + i + 1, cx: PL + (i + 0.5) * PS }))
+    .map((_, i) => ({ seq: base + i + 1, cx: PL + (i + 0.5) * PS }))
     .filter((_, i) => i % 10 === 0)
 })
 
