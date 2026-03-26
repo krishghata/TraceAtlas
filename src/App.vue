@@ -103,6 +103,7 @@ import NetworkScanView   from './components/NetworkScanView.vue'
 import SslView           from './components/SslView.vue'
 import HttpInspectorView from './components/HttpInspectorView.vue'
 import WakeOnLanView     from './components/WakeOnLanView.vue'
+import AboutView        from './components/AboutView.vue'
 import { check } from '@tauri-apps/plugin-updater'
 
 // ── Feature registry ──────────────────────────────────────────────────────────
@@ -119,6 +120,7 @@ const FEATURES = {
   ssl:     { type: 'ssl',     icon: '🔒',  label: 'SSL Inspector',  component: SslView           },
   http:    { type: 'http',    icon: '🌐',  label: 'HTTP Headers',   component: HttpInspectorView },
   wol:     { type: 'wol',     icon: '💡',  label: 'Wake on LAN',    component: WakeOnLanView     },
+  about:   { type: 'about',   icon: 'ℹ️',  label: 'About',          component: AboutView         },
 }
 
 // ── Tab state ─────────────────────────────────────────────────────────────────

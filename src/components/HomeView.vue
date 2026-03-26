@@ -35,6 +35,17 @@
     </div>
   </div>
 
+  <!-- ── Footer ──────────────────────────────────────────────────────────── -->
+  <div style="max-width:900px;margin:32px auto 0;display:flex;justify-content:space-between;align-items:center;padding-bottom:16px;flex-wrap:wrap;gap:8px">
+    <span style="font-size:11px;color:#1e3a5f">TraceAtlas v0.2.0 · MIT License</span>
+    <button @click="$emit('open', 'about')"
+      style="background:none;border:none;font-size:11px;color:#334155;cursor:pointer;padding:4px 8px;border-radius:4px;transition:color 0.15s"
+      @mouseenter="e => e.target.style.color='#64748b'"
+      @mouseleave="e => e.target.style.color='#334155'">
+      ℹ️ About &amp; Credits
+    </button>
+  </div>
+
 </div>
 </template>
 
