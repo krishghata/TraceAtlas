@@ -18,6 +18,7 @@ tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 tauri-plugin-updater = "2"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+tokio = { version = "1", features = ["net", "time", "io-util"] }
 
 [profile.release]
 panic = "abort"

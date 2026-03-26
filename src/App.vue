@@ -8,9 +8,9 @@
   style="height:100vh;display:flex;flex-direction:column;overflow:hidden;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
 
   <!-- ── Tab bar ─────────────────────────────────────────────────────────── -->
-  <div style="display:flex;align-items:stretch;background:#0d1b2a;border-bottom:1px solid #1e3a5f;flex-shrink:0;padding:0 6px">
+  <div style="display:flex;align-items:stretch;background:#0d1b2a;border-bottom:1px solid #1e3a5f;flex-shrink:0;padding:0 6px;overflow-x:auto;scrollbar-width:none">
     <button v-for="tab in tabs" :key="tab.id" @click="activeTab = tab.id"
-      :style="`padding:9px 18px;background:none;border:none;border-bottom:2px solid ${activeTab===tab.id ? '#38bdf8' : 'transparent'};color:${activeTab===tab.id ? '#38bdf8' : '#64748b'};font-size:12px;font-weight:600;cursor:pointer;font-family:'Segoe UI',sans-serif;white-space:nowrap;transition:color 0.15s,border-color 0.15s`">
+      :style="`padding:8px 14px;background:none;border:none;border-bottom:2px solid ${activeTab===tab.id ? '#38bdf8' : 'transparent'};color:${activeTab===tab.id ? '#38bdf8' : '#64748b'};font-size:11px;font-weight:600;cursor:pointer;font-family:'Segoe UI',sans-serif;white-space:nowrap;transition:color 0.15s,border-color 0.15s`">
       {{ tab.label }}
     </button>
   </div>
@@ -56,6 +56,9 @@ import AppView           from './components/AppView.vue'
 import PingView          from './components/PingView.vue'
 import NetworkHealthView from './components/NetworkHealthView.vue'
 import SpeedTestView     from './components/SpeedTestView.vue'
+import DnsView           from './components/DnsView.vue'
+import WhoisView         from './components/WhoisView.vue'
+import PortScannerView   from './components/PortScannerView.vue'
 import { check } from '@tauri-apps/plugin-updater'
 
 const page      = ref('home')
@@ -66,6 +69,9 @@ const activeComponent = computed(() => ({
   ping:   PingView,
   health: NetworkHealthView,
   speed:  SpeedTestView,
+  dns:    DnsView,
+  whois:  WhoisView,
+  ports:  PortScannerView,
 })[activeTab.value])
 
 const tabs = [
@@ -73,6 +79,9 @@ const tabs = [
   { id: 'ping',   label: '📡 Ping'           },
   { id: 'health', label: '🩺 Network Health' },
   { id: 'speed',  label: '⚡ Speed Test'     },
+  { id: 'dns',    label: '🔎 DNS Lookup'     },
+  { id: 'whois',  label: '📋 Whois'          },
+  { id: 'ports',  label: '🔌 Port Scanner'   },
 ]
 
 // ── Auto-updater ─────────────────────────────────────────────────────────────
