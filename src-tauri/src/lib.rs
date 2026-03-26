@@ -554,9 +554,6 @@ async fn ssl_inspect(host: String, port: Option<u16>) -> Result<SslCertInfo, Str
     let addr = format!("{}:{}", host, port);
 
     tauri::async_runtime::spawn_blocking(move || {
-        use std::io::{Read, Write};
-        use std::net::TcpStream;
-        use std::time::Duration;
 
         // Fetch raw certificate via openssl s_client
         #[cfg(target_os = "windows")]
@@ -706,7 +703,7 @@ async fn http_inspect(url: String) -> Result<HttpInspectResult, String> {
         let mut protocol = String::new();
         let mut status_text = String::new();
 
-        for (bi, block) in blocks.iter().enumerate() {
+        for (_bi, block) in blocks.iter().enumerate() {
             let lines: Vec<&str> = block.lines().collect();
             if lines.is_empty() { continue; }
 
