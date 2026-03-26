@@ -27,17 +27,33 @@ function haversine(lat1, lon1, lat2, lon2) {
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
 }
 
-/** Generate interpolated arc points between two lat/lon pairs. */
+/** Generate interpolated arc points between two lat/lon pairs.
+ *  The arc bulges perpendicular-left of the travel direction so it
+ *  always curves the same way regardless of which direction the route goes.
+ *  For very short hops (< 200 km) the arc is nearly flat.
+ */
 function arcPoints(lat1, lon1, lat2, lon2, steps = 40) {
-  const dist      = haversine(lat1, lon1, lat2, lon2)
-  const arcHeight = Math.min(dist / 30, 18)  // scale lift with distance, cap at 18°
-  const pts       = []
+  const dist = haversine(lat1, lon1, lat2, lon2)
+
+  // Flat for short hops; gentle curve for long ones; capped at 10°
+  const arcHeight = Math.min(dist / 50, 10)
+
+  // Direction vector (in lat/lon space)
+  const dLat = lat2 - lat1
+  const dLon = lon2 - lon1
+
+  // Perpendicular-left unit vector (rotate 90° CCW): (-dLon, dLat)
+  const len = Math.sqrt(dLat * dLat + dLon * dLon) || 1
+  const perpLat = -dLon / len
+  const perpLon =  dLat / len
+
+  const pts = []
   for (let i = 0; i <= steps; i++) {
     const t      = i / steps
-    const lat    = lat1 + (lat2 - lat1) * t
-    const lon    = lon1 + (lon2 - lon1) * t
+    const lat    = lat1 + dLat * t
+    const lon    = lon1 + dLon * t
     const offset = Math.sin(Math.PI * t) * arcHeight
-    pts.push([lat + offset, lon])
+    pts.push([lat + perpLat * offset, lon + perpLon * offset])
   }
   return pts
 }
