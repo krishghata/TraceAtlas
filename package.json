@@ -1,6 +1,6 @@
 {
   "name": "traceatlas",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Network diagnostics toolkit — traceroute, ping, speed test, DNS, port scanner, MTR, SSL inspector and more",
   "scripts": {
     "dev": "vite",
