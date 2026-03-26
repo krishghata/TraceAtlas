@@ -1,6 +1,6 @@
 [package]
 name = "traceatlas"
-version = "0.0.1"
+version = "0.2.0"
 description = "TraceAtlas — Internet Path Visualizer"
 authors = ["Krishnendu Ghata"]
 edition = "2021"
