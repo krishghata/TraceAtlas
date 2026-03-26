@@ -6,7 +6,7 @@
 
   <h1 style="font-size:32px;font-weight:700;color:#e2e8f0;margin:0 0 8px;letter-spacing:-0.5px">TraceAtlas</h1>
   <p style="font-size:14px;color:#64748b;margin:0 0 28px;max-width:340px;line-height:1.6">
-    Visualize how your internet traffic travels — hop by hop, country by country, across the globe.
+    A complete network diagnostics toolkit — traceroute, ping, speed test, DNS, port scanner, MTR, SSL inspector and more.
   </p>
 
   <!-- Progress bar -->
@@ -15,7 +15,7 @@
   </div>
   <p style="font-size:11px;color:#334155;margin:0">Launching in {{ countdown }}s…</p>
 
-  <p style="margin-top:40px;font-size:11px;color:#1e3a5f">Tauri · Vue 3 · Leaflet · ip-api.com</p>
+  <p style="margin-top:40px;font-size:11px;color:#1e3a5f">12 tools · Tauri · Vue 3 · Rust</p>
 </div>
 </template>
 
