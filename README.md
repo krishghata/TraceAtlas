@@ -180,7 +180,7 @@ Pre-built installers are available on the [Releases](https://github.com/krishgha
 
 | Platform | Format |
 |----------|--------|
-| Windows  | `.msi` installer · Portable `.zip` |
+| Windows  | Installer `.msi`  · Portable `.zip` |
 | macOS    | `.dmg` |
 | Linux    | `.AppImage` · `.deb` |
 

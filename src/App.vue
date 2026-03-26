@@ -1,40 +1,39 @@
 
 <template>
 <!-- ── Splash ──────────────────────────────────────────────────────────────── -->
-<div v-if="page === 'splash'">
+<div v-if="page === 'splash'" style="height:100%;overflow:hidden">
   <Landing @start="page = 'app'" />
 </div>
 
 <!-- ── App shell ──────────────────────────────────────────────────────────── -->
-<div v-else style="height:100vh;display:flex;flex-direction:column;overflow:hidden;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
+<div v-else style="height:100%;display:flex;flex-direction:column;overflow:hidden;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
 
   <!-- ── Browser-style tab bar ─────────────────────────────────────────── -->
   <div style="display:flex;align-items:stretch;background:#060d18;border-bottom:1px solid #1e3a5f;flex-shrink:0;min-height:36px;overflow:hidden">
 
-    <!-- Scrollable open-tabs area — tabs shrink, + always visible -->
-    <div style="display:flex;align-items:stretch;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none">
-      <div v-for="tab in openTabs" :key="tab.type"
-        @click="activeType = tab.type; showHome = false"
-        :style="`display:flex;align-items:center;gap:6px;padding:0 8px 0 10px;
-          min-width:90px;max-width:150px;border-right:1px solid #1e3a5f;cursor:pointer;flex-shrink:0;
-          background:${isActive(tab.type) ? '#0a0f1e' : 'transparent'};
-          border-bottom:2px solid ${isActive(tab.type) ? '#38bdf8' : 'transparent'};
-          transition:background 0.1s`">
-        <span style="font-size:12px;line-height:1;flex-shrink:0">{{ tab.icon }}</span>
-        <span :style="`font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-          color:${isActive(tab.type) ? '#e2e8f0' : '#64748b'}`">
-          {{ tab.label }}
-        </span>
-        <span @click.stop="closeTab(tab.type)"
-          style="font-size:13px;color:#334155;cursor:pointer;padding:1px;line-height:1;flex-shrink:0;border-radius:3px;transition:color 0.1s"
-          @mouseenter="e => e.target.style.color='#94a3b8'"
-          @mouseleave="e => e.target.style.color='#334155'">×</span>
-      </div>
+    <!-- Tabs — shrink as more open, just like a browser -->
+    <div v-for="tab in openTabs" :key="tab.type"
+      @click="activeType = tab.type; showHome = false"
+      :style="`display:flex;align-items:center;gap:5px;padding:0 6px 0 10px;
+        flex:1;min-width:60px;max-width:160px;overflow:hidden;
+        border-right:1px solid #1e3a5f;cursor:pointer;
+        background:${isActive(tab.type) ? '#0a0f1e' : 'transparent'};
+        border-bottom:2px solid ${isActive(tab.type) ? '#38bdf8' : 'transparent'};
+        transition:background 0.1s`">
+      <span style="font-size:12px;line-height:1;flex-shrink:0">{{ tab.icon }}</span>
+      <span :style="`font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+        color:${isActive(tab.type) ? '#e2e8f0' : '#64748b'}`">
+        {{ tab.label }}
+      </span>
+      <span @click.stop="closeTab(tab.type)"
+        style="font-size:13px;color:#334155;cursor:pointer;padding:1px;line-height:1;flex-shrink:0;border-radius:3px;transition:color 0.1s"
+        @mouseenter="e => e.target.style.color='#94a3b8'"
+        @mouseleave="e => e.target.style.color='#334155'">×</span>
     </div>
 
-    <!-- New tab (+) — always pinned to the right -->
+    <!-- + floats right after the last tab -->
     <button @click="showHome = true; activeType = null"
-      :style="`padding:0 12px;background:${showHome ? '#0a1628' : 'none'};border:none;border-left:1px solid #1e3a5f;
+      :style="`padding:0 12px;background:${showHome ? '#0a1628' : 'none'};border:none;border-right:1px solid #1e3a5f;
         border-bottom:2px solid ${showHome ? '#38bdf8' : 'transparent'};
         color:${showHome ? '#38bdf8' : '#475569'};font-size:18px;cursor:pointer;flex-shrink:0;
         transition:color 0.1s;line-height:1`"

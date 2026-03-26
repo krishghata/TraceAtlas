@@ -63,25 +63,13 @@
           </radialGradient>
         </defs>
 
-        <!-- ── Connection lines ── -->
+        <!-- ── Connection lines — always animated, color by status ── -->
         <g v-for="line in topoLines" :key="line.key">
-          <!-- Animated dashes while checking -->
-          <line v-if="line.status === 'checking'"
+          <line
             :x1="line.x1" :y1="64" :x2="line.x2" :y2="64"
-            stroke="#1e3a5f" stroke-width="2.5" stroke-dasharray="7 5"
-            class="flow"/>
-          <!-- OK — solid green glow -->
-          <line v-else-if="line.status === 'ok'"
-            :x1="line.x1" :y1="64" :x2="line.x2" :y2="64"
-            stroke="#22c55e" stroke-width="2.5" filter="url(#glow-ok)"/>
-          <!-- Degraded — amber -->
-          <line v-else-if="line.status === 'degraded'"
-            :x1="line.x1" :y1="64" :x2="line.x2" :y2="64"
-            stroke="#f59e0b" stroke-width="2.5" filter="url(#glow-warn)"/>
-          <!-- Down — dashed red -->
-          <line v-else
-            :x1="line.x1" :y1="64" :x2="line.x2" :y2="64"
-            stroke="#ef4444" stroke-width="2" stroke-dasharray="5 4"/>
+            :stroke="{ ok:'#22c55e', degraded:'#f59e0b', down:'#ef4444', blocked:'#1e293b', checking:'#1e3a5f' }[line.status] ?? '#1e3a5f'"
+            stroke-width="2.5" stroke-dasharray="7 5"
+            style="animation: ta-flow 0.55s linear infinite"/>
 
           <!-- RTT label above mid-line -->
           <g v-if="line.rttLabel">
@@ -152,7 +140,13 @@
         </div>
 
         <!-- Metrics -->
-        <div v-if="layer.status !== 'checking'" style="display:flex;gap:12px;margin-bottom:9px;font-size:11px">
+        <div v-if="layer.status === 'checking'" style="display:flex;align-items:center;gap:5px;margin-bottom:9px;font-size:11px;color:#334155">
+          <span class="spinner"/>Checking…
+        </div>
+        <div v-else-if="layer.status === 'blocked'" style="margin-bottom:9px;font-size:11px;color:#334155">
+          — not tested (upstream down)
+        </div>
+        <div v-else style="display:flex;gap:12px;margin-bottom:9px;font-size:11px">
           <span>
             <span style="color:#64748b">Avg </span>
             <span :style="`font-weight:700;font-family:monospace;color:${rttColor(layer.stats?.avg)}`">
@@ -165,9 +159,6 @@
               {{ layer.stats?.loss !== undefined ? layer.stats.loss + '%' : '—' }}
             </span>
           </span>
-        </div>
-        <div v-else style="display:flex;align-items:center;gap:5px;margin-bottom:9px;font-size:11px;color:#334155">
-          <span class="spinner"/>Checking…
         </div>
 
         <!-- Sparkline with area fill -->
@@ -197,52 +188,22 @@
     <!-- ═══════════════════════════════════════════════════════════════════ -->
     <!--  LATENCY COMPARISON BAR CHART                                       -->
     <!-- ═══════════════════════════════════════════════════════════════════ -->
-    <div v-if="diagnosis" style="background:#0d1b2a;border-radius:8px;border:1px solid #1e3a5f;padding:14px;flex-shrink:0">
-      <div style="font-size:11px;font-weight:600;color:#475569;margin-bottom:10px;letter-spacing:0.07em;text-transform:uppercase">
-        Latency Comparison
+    <div v-if="diagnosis" style="background:#0d1b2a;border-radius:8px;border:1px solid #1e3a5f;padding:8px 12px;flex-shrink:0">
+      <div style="font-size:10px;font-weight:600;color:#334155;margin-bottom:6px;letter-spacing:0.07em;text-transform:uppercase">Latency Comparison</div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <div v-for="layer in layers" :key="layer.id" style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:#475569;width:110px;flex-shrink:0;white-space:nowrap">{{ barLabel(layer) }}</span>
+          <div style="flex:1;height:8px;background:#1e293b;border-radius:3px;overflow:hidden">
+            <div v-if="layer.stats?.avg != null && layer.status !== 'down'"
+              :style="`height:100%;border-radius:3px;width:${barPct(layer.stats.avg)}%;background:${rttColor(layer.stats.avg)};opacity:0.85`"></div>
+          </div>
+          <span v-if="layer.status === 'down'" style="font-size:10px;color:#ef4444;font-family:monospace;width:60px;flex-shrink:0">unreachable</span>
+          <span v-else-if="layer.stats?.avg != null" :style="`font-size:10px;font-family:monospace;font-weight:700;color:${rttColor(layer.stats.avg)};width:60px;flex-shrink:0`">
+            {{ layer.stats.avg }}ms <span style="color:#334155;font-weight:400">{{ layer.stats.min }}–{{ layer.stats.max }}</span>
+          </span>
+          <span v-else style="font-size:10px;color:#334155;width:60px;flex-shrink:0">—</span>
+        </div>
       </div>
-      <svg :viewBox="`0 0 500 ${layers.length * 26}`" style="width:100%;display:block">
-        <defs>
-          <linearGradient v-for="l in layers" :key="'bg-'+l.id" :id="'bg-'+l.id"
-            x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" :stop-color="rttColor(l.stats?.avg)" stop-opacity="0.9"/>
-            <stop offset="100%" :stop-color="rttColor(l.stats?.avg)" stop-opacity="0.4"/>
-          </linearGradient>
-        </defs>
-
-        <g v-for="(layer, i) in layers" :key="layer.id">
-          <!-- Row label -->
-          <text x="0" :y="i * 26 + 15"
-            fill="#64748b" font-size="10" font-family="'Segoe UI',sans-serif">
-            {{ barLabel(layer) }}
-          </text>
-          <!-- Track -->
-          <rect x="118" :y="i * 26 + 3" :width="BAR_MAX" height="16" rx="3" fill="#1e293b"/>
-          <!-- Bar -->
-          <rect v-if="layer.stats?.avg !== null && layer.status !== 'down'"
-            x="118" :y="i * 26 + 3" :width="barW(layer.stats.avg)" height="16" rx="3"
-            :fill="`url(#bg-${layer.id})`"
-            :style="`filter:drop-shadow(0 0 4px ${rttColor(layer.stats.avg)}50)`"/>
-          <!-- Down label -->
-          <text v-else-if="layer.status === 'down'"
-            x="124" :y="i * 26 + 15" fill="#ef4444" font-size="10" font-family="monospace">
-            Unreachable
-          </text>
-          <!-- RTT value -->
-          <text v-if="layer.stats?.avg !== null && layer.status !== 'down'"
-            :x="118 + barW(layer.stats.avg) + 7" :y="i * 26 + 15"
-            :fill="rttColor(layer.stats.avg)"
-            font-size="10" font-family="monospace" font-weight="bold">
-            {{ layer.stats.avg }}ms
-          </text>
-          <!-- Min / Max subtle annotation -->
-          <text v-if="layer.stats?.min !== null && layer.status !== 'down'"
-            x="468" :y="i * 26 + 15"
-            fill="#334155" font-size="9" font-family="monospace" text-anchor="end">
-            {{ layer.stats.min }}–{{ layer.stats.max }}
-          </text>
-        </g>
-      </svg>
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════ -->
@@ -274,7 +235,6 @@ import { invoke } from '@tauri-apps/api/core'
 import { parsePingOutput, rttColor } from '../lib/ping.js'
 
 // ── Constants ────────────────────────────────────────────────────────────────
-const BAR_MAX    = 340   // bar chart max width (SVG units)
 const NODE_R     = 28    // topology node radius
 const NODE_GAP   = 4     // gap between ring edge and line end
 
@@ -358,16 +318,16 @@ const topoLines = computed(() => {
 })
 
 function nodeRingColor(status) {
-  return { checking: '#1e3a5f', ok: '#22c55e', degraded: '#f59e0b', down: '#ef4444' }[status] ?? '#1e3a5f'
+  return { checking: '#1e3a5f', ok: '#22c55e', degraded: '#f59e0b', down: '#ef4444', blocked: '#1e293b' }[status] ?? '#1e3a5f'
 }
 
 // ── Layer card helpers ────────────────────────────────────────────────────────
-function layerBorder(s) { return { checking:'#1e3a5f', ok:'#166534', degraded:'#713f12', down:'#7f1d1d' }[s] ?? '#1e3a5f' }
-function layerBg(s)     { return { checking:'#0a0f1e', ok:'#052e16', degraded:'#1a1000', down:'#1a0000' }[s] ?? '#0a0f1e' }
-function badgeBg(s)     { return { checking:'#1e293b', ok:'#14532d', degraded:'#713f12', down:'#450a0a' }[s] ?? '#1e293b' }
-function badgeColor(s)  { return { checking:'#64748b', ok:'#22c55e', degraded:'#f59e0b', down:'#ef4444' }[s] ?? '#64748b' }
-function statusLabel(s) { return { checking:'Checking…', ok:'OK', degraded:'Degraded', down:'Down' }[s] ?? s }
-function layerLineColor(s) { return { ok:'#22c55e', degraded:'#f59e0b', down:'#ef4444' }[s] ?? '#38bdf8' }
+function layerBorder(s) { return { checking:'#1e3a5f', ok:'#166534', degraded:'#713f12', down:'#7f1d1d', blocked:'#1e293b' }[s] ?? '#1e3a5f' }
+function layerBg(s)     { return { checking:'#0a0f1e', ok:'#052e16', degraded:'#1a1000', down:'#1a0000', blocked:'#0a0f1e' }[s] ?? '#0a0f1e' }
+function badgeBg(s)     { return { checking:'#1e293b', ok:'#14532d', degraded:'#713f12', down:'#450a0a', blocked:'#1e293b' }[s] ?? '#1e293b' }
+function badgeColor(s)  { return { checking:'#64748b', ok:'#22c55e', degraded:'#f59e0b', down:'#ef4444', blocked:'#334155' }[s] ?? '#64748b' }
+function statusLabel(s) { return { checking:'Checking…', ok:'OK', degraded:'Degraded', down:'Down', blocked:'Blocked' }[s] ?? s }
+function layerLineColor(s) { return { ok:'#22c55e', degraded:'#f59e0b', down:'#ef4444', blocked:'#1e293b' }[s] ?? '#38bdf8' }
 function lossCol(loss)  { return loss == null ? '#94a3b8' : loss === 0 ? '#22c55e' : loss < 20 ? '#f59e0b' : '#ef4444' }
 
 // ── Sparkline helpers ────────────────────────────────────────────────────────
@@ -422,8 +382,8 @@ const maxBarRtt = computed(() => {
   return avgs.length ? Math.max(100, Math.max(...avgs) * 1.25) : 200
 })
 
-function barW(rtt) {
-  return rtt == null ? 0 : Math.min((rtt / maxBarRtt.value) * BAR_MAX, BAR_MAX)
+function barPct(rtt) {
+  return rtt == null ? 0 : Math.min((rtt / maxBarRtt.value) * 100, 100)
 }
 
 const BAR_LABELS = { gw: 'Local Gateway', isp1: 'ISP (8.8.8.8)', isp2: 'ISP (1.1.1.1)', dns: 'DNS (google)' }
@@ -436,10 +396,11 @@ const diagColor  = computed(() => ({ ok:'#22c55e', info:'#38bdf8', warning:'#f59
 
 function computeDiagnosis(ls) {
   const [gw, isp1, isp2, dns] = ls
-  const gwDown     = gw.status   === 'down'
-  const ispDown    = isp1.status === 'down'  && isp2.status === 'down'
+  const isDown     = s => s === 'down' || s === 'blocked'
+  const gwDown     = isDown(gw.status)
+  const ispDown    = isDown(isp1.status) && isDown(isp2.status)
   const ispDegrade = !ispDown && (isp1.status === 'degraded' || isp2.status === 'degraded')
-  const dnsDown    = dns.status  === 'down'
+  const dnsDown    = isDown(dns.status)
   const dnsDegrade = dns.status  === 'degraded'
   const gwHighRtt  = gw.status   === 'ok' && (gw.stats?.avg ?? 0) > 20
 
@@ -511,6 +472,12 @@ async function runCheck() {
     { id: 'dns',  name: 'DNS Resolution',   target: 'google.com', note: 'needs DNS',  icon: '🔍', status: 'checking', stats: null, packets: [] },
   ]
 
+  const blockedStats = { sent: 0, received: 0, loss: 100, min: null, max: null, avg: null, jitter: null }
+
+  const markBlocked = (idx) => {
+    layers.value[idx] = { ...layers.value[idx], status: 'blocked', stats: blockedStats, packets: [] }
+  }
+
   const pingLayer = async (idx) => {
     try {
       const res    = await invoke('run_ping', { target: layers.value[idx].target, count: 5 })
@@ -521,24 +488,44 @@ async function runCheck() {
         : 'ok'
       layers.value[idx] = { ...layers.value[idx], stats: s, packets: parsed.packets, status }
     } catch {
-      layers.value[idx] = { ...layers.value[idx], status: 'down',
-        stats: { sent:0, received:0, loss:100, min:null, max:null, avg:null, jitter:null }, packets: [] }
+      layers.value[idx] = { ...layers.value[idx], status: 'down', stats: blockedStats, packets: [] }
     }
   }
 
-  await Promise.allSettled([pingLayer(0), pingLayer(1), pingLayer(2), pingLayer(3)])
+  // ── Cascading: gateway → ISP (parallel) → DNS ──────────────────────────────
+  // Each layer only runs if the previous layer is reachable.
+  // If gateway is down, ISP and DNS are marked blocked (not independently tested).
+
+  await pingLayer(0)  // gateway
+
+  const gwOk = layers.value[0].status === 'ok' || layers.value[0].status === 'degraded'
+  if (!gwOk) {
+    markBlocked(1); markBlocked(2); markBlocked(3)
+  } else {
+    await Promise.allSettled([pingLayer(1), pingLayer(2)])  // ISP pair in parallel
+
+    const ispOk = layers.value[1].status === 'ok' || layers.value[1].status === 'degraded'
+             || layers.value[2].status === 'ok' || layers.value[2].status === 'degraded'
+    if (!ispOk) {
+      markBlocked(3)
+    } else {
+      await pingLayer(3)  // DNS
+    }
+  }
+
   diagnosis.value = computeDiagnosis(layers.value)
   running.value = false
 }
 </script>
 
-<style scoped>
-/* Topology line flow animation (checking state) */
-@keyframes flow {
+<style>
+@keyframes ta-flow {
   from { stroke-dashoffset: 24; }
   to   { stroke-dashoffset: 0;  }
 }
-.flow { animation: flow 0.55s linear infinite; }
+</style>
+
+<style scoped>
 
 /* Node ring pulse (checking state) */
 @keyframes ring-pulse {

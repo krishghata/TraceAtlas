@@ -52,7 +52,7 @@
   <!-- Globe outer ring -->
   <circle cx="512" cy="512" r="375" fill="none" stroke="#38bdf8" stroke-width="3"/>
 
-  <!-- ── Route Arc (glow layers) ────────────────────────────── -->
+  <!-- Route Arc (glow layers) -->
   <path d="M 218 680 C 268 370, 720 320, 806 412"
     fill="none" stroke="#0284c7" stroke-width="28" stroke-linecap="round" opacity="0.08"
     filter="url(#arcGlow)"/>
@@ -65,25 +65,19 @@
   <path d="M 218 680 C 268 370, 720 320, 806 412"
     fill="none" stroke="#0c4a6e" stroke-width="3" stroke-linecap="round" opacity="1"/>
 
-  <!-- ── Hop dots ────────────────────────────────────────────── -->
-
-  <!-- Source dot -->
+  <!-- Hop dots -->
   <g filter="url(#dotGlow)">
     <circle cx="218" cy="680" r="30" fill="#0284c7" opacity="0.15"/>
     <circle cx="218" cy="680" r="20" fill="#0284c7" opacity="0.30"/>
     <circle cx="218" cy="680" r="12" fill="#0369a1" opacity="0.80"/>
     <circle cx="218" cy="680" r="7"  fill="#0c4a6e" opacity="1"/>
   </g>
-
-  <!-- Mid hop dot -->
   <g filter="url(#dotGlow)">
     <circle cx="510" cy="328" r="26" fill="#0284c7" opacity="0.15"/>
     <circle cx="510" cy="328" r="17" fill="#0284c7" opacity="0.30"/>
     <circle cx="510" cy="328" r="10" fill="#0369a1" opacity="0.80"/>
     <circle cx="510" cy="328" r="6"  fill="#0c4a6e" opacity="1"/>
   </g>
-
-  <!-- Destination dot -->
   <g filter="url(#dotGlow)">
     <circle cx="806" cy="412" r="30" fill="#0284c7" opacity="0.15"/>
     <circle cx="806" cy="412" r="20" fill="#0284c7" opacity="0.30"/>

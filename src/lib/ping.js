@@ -45,13 +45,36 @@ export function parsePingOutput(output, isWin) {
     }
   }
 
+  // ── Windows summary fallback ──────────────────────────────────────────────
+  // When WiFi is disconnected, Windows may produce no per-packet lines at all.
+  // Parse "Packets: Sent = 5, Received = 0, Lost = 5 (100% loss)" as ground truth.
+  if (isWin && packets.length === 0) {
+    const m = output.match(/Packets:\s*Sent\s*=\s*(\d+)[^,]*,\s*Received\s*=\s*(\d+)[^,]*,\s*Lost\s*=\s*(\d+)/i)
+    if (m) {
+      const lost = parseInt(m[3], 10)
+      const recv = parseInt(m[2], 10)
+      for (let i = 0; i < recv; i++) packets.push({ rtt: 1, dropped: false })
+      for (let i = 0; i < lost; i++) packets.push({ rtt: null, dropped: true })
+    }
+  }
+
+  // Also catch any output that has zero packets but clearly indicates failure
+  if (packets.length === 0 && (
+    output.toLowerCase().includes('general failure') ||
+    output.toLowerCase().includes('transmit failed') ||
+    output.toLowerCase().includes('no route') ||
+    output.toLowerCase().includes('network unreachable')
+  )) {
+    packets.push({ rtt: null, dropped: true })
+  }
+
   const rtts    = packets.filter(p => !p.dropped).map(p => p.rtt)
   const dropped = packets.filter(p => p.dropped).length
 
   const stats = {
     sent:     packets.length,
     received: rtts.length,
-    loss:     packets.length > 0 ? Math.round((dropped / packets.length) * 100) : 0,
+    loss:     packets.length > 0 ? Math.round((dropped / packets.length) * 100) : 100,
     min:      rtts.length > 0 ? Math.min(...rtts) : null,
     max:      rtts.length > 0 ? Math.max(...rtts) : null,
     avg:      rtts.length > 0 ? Math.round(rtts.reduce((a, b) => a + b, 0) / rtts.length) : null,

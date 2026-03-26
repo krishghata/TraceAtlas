@@ -1,0 +1,60 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <filter id="arcGlowL" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="12" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="dotGlowL" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="16" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <clipPath id="globeClipL">
+      <circle cx="512" cy="512" r="375"/>
+    </clipPath>
+  </defs>
+
+  <!-- Globe body — very subtle tint, mostly transparent -->
+  <circle cx="512" cy="512" r="375" fill="#38bdf8" opacity="0.06"/>
+
+  <!-- Globe wireframe — bright cyan -->
+  <g clip-path="url(#globeClipL)" stroke="#38bdf8" stroke-width="6" fill="none" opacity="0.55">
+    <circle cx="512" cy="512" r="375"/>
+    <ellipse cx="512" cy="512" rx="375" ry="90"/>
+    <ellipse cx="512" cy="390" rx="345" ry="68"/>
+    <ellipse cx="512" cy="634" rx="345" ry="68"/>
+    <ellipse cx="512" cy="278" rx="255" ry="46"/>
+    <ellipse cx="512" cy="746" rx="255" ry="46"/>
+    <ellipse cx="512" cy="512" rx="90"  ry="375"/>
+    <ellipse cx="512" cy="512" rx="200" ry="375"/>
+    <ellipse cx="512" cy="512" rx="330" ry="375"/>
+  </g>
+
+  <!-- Globe outer ring — bright -->
+  <circle cx="512" cy="512" r="375" fill="none" stroke="#7dd3fc" stroke-width="5" opacity="0.9"/>
+
+  <!-- ── Route Arc — bright white with cyan glow ── -->
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#38bdf8" stroke-width="30" stroke-linecap="round" opacity="0.15"
+    filter="url(#arcGlowL)"/>
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#7dd3fc" stroke-width="10" stroke-linecap="round" opacity="0.5"/>
+  <path d="M 218 680 C 268 370, 720 320, 806 412"
+    fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round" opacity="1"/>
+
+  <!-- ── Hop dots — white core, cyan glow ── -->
+  <g filter="url(#dotGlowL)">
+    <circle cx="218" cy="680" r="32" fill="#38bdf8" opacity="0.2"/>
+    <circle cx="218" cy="680" r="20" fill="#7dd3fc" opacity="0.5"/>
+    <circle cx="218" cy="680" r="11" fill="#ffffff" opacity="1"/>
+  </g>
+  <g filter="url(#dotGlowL)">
+    <circle cx="510" cy="328" r="26" fill="#38bdf8" opacity="0.2"/>
+    <circle cx="510" cy="328" r="16" fill="#7dd3fc" opacity="0.5"/>
+    <circle cx="510" cy="328" r="9"  fill="#ffffff" opacity="1"/>
+  </g>
+  <g filter="url(#dotGlowL)">
+    <circle cx="806" cy="412" r="32" fill="#38bdf8" opacity="0.2"/>
+    <circle cx="806" cy="412" r="20" fill="#7dd3fc" opacity="0.5"/>
+    <circle cx="806" cy="412" r="11" fill="#ffffff" opacity="1"/>
+  </g>
+</svg>
