@@ -158,8 +158,10 @@ function drawCableRoute() {
 
 onMounted(async () => {
   map = L.map('map', { zoomControl: true }).setView([20, 0], 2)
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© OpenStreetMap contributors',
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> © <a href="https://carto.com/attributions">CARTO</a>',
+    subdomains: 'abcd',
+    maxZoom: 19,
     className: 'map-tiles'
   }).addTo(map)
 
@@ -168,7 +170,7 @@ onMounted(async () => {
     const res  = await fetch('/data/cables.geojson')
     cablesGeojson = await res.json()
     cablesLayer   = L.geoJSON(cablesGeojson, {
-      style: { color: '#f97316', weight: 1.2, opacity: 0.45 }
+      style: { color: '#1e4a6e', weight: 1.2, opacity: 0.6 }
     })
     if (props.showCables) cablesLayer.addTo(map)
   } catch (_) {
@@ -284,7 +286,7 @@ function moveMarkerTo(idx) {
   const pt = coords[idx]
   if (!packetMarker) {
     packetMarker = L.circleMarker(pt, {
-      radius: 8, color: '#f97316', fillColor: '#f97316', fillOpacity: 1, weight: 0
+      radius: 7, color: '#ffffff', fillColor: '#38bdf8', fillOpacity: 1, weight: 2
     }).addTo(map)
   } else {
     packetMarker.setLatLng(pt)
