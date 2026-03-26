@@ -231,6 +231,31 @@ function drawRoute() {
     ].forEach(o => L.polyline(fullArcPts, o).addTo(routeLayer))
   }
 
+  // Animated flow layer — dashes march forward along the path to show direction
+  if (fullArcPts.length > 1) {
+    // Inject keyframes once into the document
+    if (!document.getElementById('traceatlas-flow-style')) {
+      const s = document.createElement('style')
+      s.id = 'traceatlas-flow-style'
+      // Dashoffset decreases → dashes appear to move forward (source → destination)
+      s.textContent = `@keyframes ta-flow { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }`
+      document.head.appendChild(s)
+    }
+
+    const flowLine = L.polyline(fullArcPts, {
+      weight:    2.5,
+      opacity:   0.7,
+      color:     '#7dd3fc',
+      dashArray: '6 14',   // 6px dash, 14px gap → total period 20px matches keyframe
+    }).addTo(routeLayer)
+
+    // Apply animation after the SVG element is in the DOM
+    requestAnimationFrame(() => {
+      const el = flowLine.getElement()
+      if (el) el.style.animation = 'ta-flow 0.6s linear infinite'
+    })
+  }
+
   // Hop markers (latency heatmap)
   hops.forEach(h => {
     const color = latencyColor(h.latency, minLat, maxLat)
