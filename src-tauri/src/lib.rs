@@ -331,6 +331,201 @@ async fn scan_ports(host: String, ports: Vec<u16>, timeout_ms: u64) -> Result<Ve
     Ok(results)
 }
 
+// ── MTR (My Traceroute) ───────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct MtrHop {
+    pub ip:     String,
+    pub rtt_ms: Option<f64>,
+}
+
+/// Parse a single RTT value from a one-packet ping output (Windows or Unix).
+fn parse_single_rtt(text: &str) -> Option<f64> {
+    for line in text.lines() {
+        let lower = line.to_lowercase();
+        if lower.contains("time<1ms") || lower.contains("time<1 ms") {
+            return Some(0.5);
+        }
+        if let Some(pos) = lower.find("time=") {
+            let after = &lower[pos + 5..];
+            let num: String = after.chars()
+                .take_while(|c| c.is_ascii_digit() || *c == '.')
+                .collect();
+            if let Ok(v) = num.parse::<f64>() {
+                return Some(v);
+            }
+        }
+    }
+    None
+}
+
+/// Probe a list of IPs with a single ping each, all concurrently.
+/// Returns RTT (ms) or None for each IP in the same order.
+#[command]
+async fn mtr_probe(ips: Vec<String>, timeout_ms: u64) -> Result<Vec<MtrHop>, String> {
+    let timeout = timeout_ms.clamp(500, 5000);
+
+    let mut handles = Vec::with_capacity(ips.len());
+    for ip in ips {
+        handles.push(tokio::spawn(async move {
+            let ip2 = ip.clone();
+            let rtt = tauri::async_runtime::spawn_blocking(move || {
+                #[cfg(target_os = "windows")]
+                let out = Command::new("ping")
+                    .args(["-n", "1", "-w", &timeout.to_string(), &ip2])
+                    .creation_flags(CREATE_NO_WINDOW)
+                    .output();
+                #[cfg(not(target_os = "windows"))]
+                let out = Command::new("ping")
+                    .args(["-c", "1", "-W", &(timeout / 1000).max(1).to_string(), &ip2])
+                    .output();
+                out.ok().and_then(|o| {
+                    parse_single_rtt(&String::from_utf8_lossy(&o.stdout))
+                })
+            })
+            .await
+            .unwrap_or(None);
+            MtrHop { ip, rtt_ms: rtt }
+        }));
+    }
+
+    let mut results = Vec::with_capacity(handles.len());
+    for h in handles {
+        if let Ok(hop) = h.await { results.push(hop); }
+    }
+    Ok(results)
+}
+
+// ── Network Scanner ───────────────────────────────────────────────────────────
+
+#[derive(Serialize, Clone)]
+pub struct NetworkDevice {
+    pub ip:          String,
+    pub mac:         String,
+    pub vendor:      String,
+    pub hostname:    String,
+    pub device_type: String,
+}
+
+/// Map a MAC OUI prefix (6 hex chars, uppercase, no separators) to (vendor, type).
+fn mac_vendor(mac: &str) -> (&'static str, &'static str) {
+    let clean: String = mac.chars()
+        .filter(|c| c.is_ascii_hexdigit())
+        .take(6)
+        .collect::<String>()
+        .to_uppercase();
+    match clean.as_str() {
+        // Apple
+        "A4C361"|"F0DCE2"|"3C2282"|"DC2B2A"|"A45E60"|"788C54"|"F0B479"|"60F4EC" => ("Apple",          "Phone/Mac"),
+        // Samsung
+        "9C9281"|"D022BE"|"8801A7"|"843DC6"|"CC07AB"|"E4B021" => ("Samsung",        "Phone/TV"),
+        // Raspberry Pi
+        "B827EB"|"DC2494"|"E45F01"|"2CCF67"                   => ("Raspberry Pi",   "IoT"),
+        // Cisco
+        "00000C"|"001120"|"002702"|"7C690F"|"E8BA70"|"3C5731" => ("Cisco",          "Router/Switch"),
+        // TP-Link
+        "14EBE6"|"50C7BF"|"8CFAB1"|"B0487A"|"C46E1F"|"6C5AB5" => ("TP-Link",       "Router/AP"),
+        // Netgear
+        "10BF48"|"20E52A"|"28C68E"|"4487FC"|"6CB0CE"|"9C3DCF" => ("Netgear",       "Router/AP"),
+        // ASUS
+        "107B44"|"2C56DC"|"50465D"|"AC220B"|"E03F49"          => ("ASUS",          "Router/PC"),
+        // Intel (PCs/laptops)
+        "A4C494"|"8C8D28"|"B4969C"|"CC3D82"|"F8341F"|"00E04C" => ("Intel",         "PC/Laptop"),
+        // Amazon Echo / Fire
+        "0C7018"|"44650D"|"8871E5"|"A002DC"|"FC65DE"|"7485C4" => ("Amazon",        "Smart Device"),
+        // Google (Nest, Chromecast)
+        "54604A"|"F4F5E8"|"48D705"|"A4977A"|"F88FCA"          => ("Google",        "Smart Device"),
+        // Microsoft
+        "606BFF"|"7845C4"|"985FD3"|"60457F"                   => ("Microsoft",     "PC/Xbox"),
+        // Sony (PlayStation, TV)
+        "000D4B"|"001315"|"00D9D1"|"F8D0AC"                   => ("Sony",          "PlayStation/TV"),
+        _ => ("Unknown", "Device"),
+    }
+}
+
+fn parse_arp_output(text: &str) -> Vec<NetworkDevice> {
+    let mut devices = vec![];
+    for line in text.lines() {
+        let line = line.trim();
+        if line.is_empty() { continue }
+
+        // Windows format: "  192.168.1.1   aa-bb-cc-dd-ee-ff   dynamic"
+        #[cfg(target_os = "windows")]
+        {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 && parts[0].contains('.') && parts[1].contains('-') {
+                let ip  = parts[0].to_string();
+                let mac = parts[1].to_uppercase();
+                let oui = mac.replace('-', "");
+                let (vendor, dtype) = mac_vendor(&oui);
+                devices.push(NetworkDevice {
+                    ip, mac,
+                    vendor:      vendor.to_string(),
+                    hostname:    String::new(),
+                    device_type: dtype.to_string(),
+                });
+            }
+        }
+
+        // Unix format: "hostname (192.168.1.1) at aa:bb:cc:dd:ee:ff [ether] on eth0"
+        #[cfg(not(target_os = "windows"))]
+        {
+            if let (Some(s), Some(e)) = (line.find('('), line.find(')')) {
+                let ip       = line[s + 1..e].to_string();
+                let hostname = line[..s].trim().to_string();
+                let mac = line[e..].find(" at ")
+                    .and_then(|p| line[e + p + 4..].split_whitespace().next())
+                    .unwrap_or("")
+                    .to_uppercase();
+                let oui = mac.replace(':', "");
+                let (vendor, dtype) = mac_vendor(&oui);
+                devices.push(NetworkDevice {
+                    ip, mac,
+                    vendor:      vendor.to_string(),
+                    hostname,
+                    device_type: dtype.to_string(),
+                });
+            }
+        }
+    }
+    // Deduplicate by IP
+    let mut seen = std::collections::HashSet::new();
+    devices.retain(|d| seen.insert(d.ip.clone()));
+    devices
+}
+
+/// Read the OS ARP table — no elevated privileges required.
+#[command]
+async fn arp_scan() -> Result<Vec<NetworkDevice>, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        #[cfg(target_os = "windows")]
+        let out = Command::new("arp")
+            .args(["-a"])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .map_err(|e| format!("arp failed: {}", e))?;
+
+        #[cfg(not(target_os = "windows"))]
+        let out = Command::new("arp")
+            .args(["-a"])
+            .output()
+            .map_err(|e| format!("arp failed: {}", e))?;
+
+        Ok(parse_arp_output(&String::from_utf8_lossy(&out.stdout)))
+    })
+    .await
+    .map_err(|e| format!("Thread error: {}", e))?
+}
+
+/// Get the local machine's outbound IP (no packets sent — UDP trick).
+#[command]
+fn get_local_ip() -> Result<String, String> {
+    use std::net::UdpSocket;
+    let sock = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
+    sock.connect("8.8.8.8:80").map_err(|e| e.to_string())?;
+    Ok(sock.local_addr().map_err(|e| e.to_string())?.ip().to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -342,7 +537,10 @@ pub fn run() {
             get_default_gateway,
             dns_lookup,
             whois_lookup,
-            scan_ports
+            scan_ports,
+            mtr_probe,
+            arp_scan,
+            get_local_ip
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

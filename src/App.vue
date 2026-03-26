@@ -59,6 +59,8 @@ import SpeedTestView     from './components/SpeedTestView.vue'
 import DnsView           from './components/DnsView.vue'
 import WhoisView         from './components/WhoisView.vue'
 import PortScannerView   from './components/PortScannerView.vue'
+import MtrView           from './components/MtrView.vue'
+import NetworkScanView   from './components/NetworkScanView.vue'
 import { check } from '@tauri-apps/plugin-updater'
 
 const page      = ref('home')
@@ -69,9 +71,11 @@ const activeComponent = computed(() => ({
   ping:   PingView,
   health: NetworkHealthView,
   speed:  SpeedTestView,
-  dns:    DnsView,
-  whois:  WhoisView,
-  ports:  PortScannerView,
+  dns:     DnsView,
+  whois:   WhoisView,
+  ports:   PortScannerView,
+  mtr:     MtrView,
+  netscan: NetworkScanView,
 })[activeTab.value])
 
 const tabs = [
@@ -81,7 +85,9 @@ const tabs = [
   { id: 'speed',  label: '⚡ Speed Test'     },
   { id: 'dns',    label: '🔎 DNS Lookup'     },
   { id: 'whois',  label: '📋 Whois'          },
-  { id: 'ports',  label: '🔌 Port Scanner'   },
+  { id: 'ports',   label: '🔌 Port Scanner'   },
+  { id: 'mtr',     label: '📶 MTR'           },
+  { id: 'netscan', label: '🔍 Network Scan'  },
 ]
 
 // ── Auto-updater ─────────────────────────────────────────────────────────────
