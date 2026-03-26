@@ -84,6 +84,31 @@ import { batchResolveGeo, getSourceLocation }            from '../lib/geo.js'
 import { generateInsights }                              from '../lib/insights.js'
 import { getDb }                                         from '../lib/db.js'
 
+/** Snap consecutive hops that share the same country+org to their median position.
+ *  Eliminates zigzag arcs caused by ISP IPs geo-resolving to different cities. */
+function smoothGeoOutliers(hops) {
+  let i = 0
+  while (i < hops.length) {
+    let j = i + 1
+    while (j < hops.length &&
+           hops[j].country === hops[i].country &&
+           hops[j].org     === hops[i].org) j++
+    if (j - i > 1) {
+      const group = hops.slice(i, j)
+      const lats  = group.map(h => h.lat).sort((a, b) => a - b)
+      const lons  = group.map(h => h.lon).sort((a, b) => a - b)
+      const mid   = Math.floor(group.length / 2)
+      const mLat  = lats[mid]
+      const mLon  = lons[mid]
+      for (let k = i; k < j; k++) {
+        hops[k].lat = mLat
+        hops[k].lon = mLon
+      }
+    }
+    i = j
+  }
+}
+
 const data            = ref(null)
 const mapRef          = ref(null)
 const showCables      = ref(false)
@@ -136,6 +161,11 @@ async function trace() {
         return { hop: h.hop, ip: h.ip, lat: geo.lat, lon: geo.lon, country: geo.country, org: geo.org, latency: h.latency }
       })
       .filter(Boolean)
+
+    // Smooth geo outliers: group consecutive hops with the same country+org
+    // and snap them all to the median lat/lon of the group.
+    // This prevents zigzag paths when an ISP's IPs geo-resolve to different cities.
+    smoothGeoOutliers(enrichedHops)
 
     if (!enrichedHops.length) throw new Error('Could not geo-locate any hops')
 
