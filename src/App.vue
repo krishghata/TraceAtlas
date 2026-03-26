@@ -61,6 +61,9 @@ import WhoisView         from './components/WhoisView.vue'
 import PortScannerView   from './components/PortScannerView.vue'
 import MtrView           from './components/MtrView.vue'
 import NetworkScanView   from './components/NetworkScanView.vue'
+import SslView           from './components/SslView.vue'
+import HttpInspectorView from './components/HttpInspectorView.vue'
+import WakeOnLanView     from './components/WakeOnLanView.vue'
 import { check } from '@tauri-apps/plugin-updater'
 
 const page      = ref('home')
@@ -76,6 +79,9 @@ const activeComponent = computed(() => ({
   ports:   PortScannerView,
   mtr:     MtrView,
   netscan: NetworkScanView,
+  ssl:     SslView,
+  http:    HttpInspectorView,
+  wol:     WakeOnLanView,
 })[activeTab.value])
 
 const tabs = [
@@ -86,8 +92,11 @@ const tabs = [
   { id: 'dns',    label: '🔎 DNS Lookup'     },
   { id: 'whois',  label: '📋 Whois'          },
   { id: 'ports',   label: '🔌 Port Scanner'   },
-  { id: 'mtr',     label: '📶 MTR'           },
+  { id: 'mtr',     label: '📶 MTR'            },
   { id: 'netscan', label: '🔍 Network Scan'  },
+  { id: 'ssl',     label: '🔒 SSL Inspector' },
+  { id: 'http',    label: '🌐 HTTP Headers'  },
+  { id: 'wol',     label: '⚡ Wake on LAN'   },
 ]
 
 // ── Auto-updater ─────────────────────────────────────────────────────────────

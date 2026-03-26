@@ -526,6 +526,300 @@ fn get_local_ip() -> Result<String, String> {
     Ok(sock.local_addr().map_err(|e| e.to_string())?.ip().to_string())
 }
 
+// ── Phase 3 ───────────────────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct SslCertInfo {
+    pub subject:     String,
+    pub issuer:      String,
+    pub not_before:  String,
+    pub not_after:   String,
+    pub days_left:   i64,
+    pub sans:        Vec<String>,
+    pub serial:      String,
+    pub fingerprint: String,   // SHA-256 hex
+    pub protocol:    String,
+    pub cipher:      String,
+}
+
+/// Inspect the TLS certificate of a host (port defaults to 443).
+/// Uses openssl s_client (cross-platform) to retrieve certificate info.
+#[command]
+async fn ssl_inspect(host: String, port: Option<u16>) -> Result<SslCertInfo, String> {
+    let valid = host.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-');
+    if !valid || host.is_empty() {
+        return Err("Invalid host".to_string());
+    }
+    let port = port.unwrap_or(443);
+    let addr = format!("{}:{}", host, port);
+
+    tauri::async_runtime::spawn_blocking(move || {
+        use std::io::{Read, Write};
+        use std::net::TcpStream;
+        use std::time::Duration;
+
+        // Fetch raw certificate via openssl s_client
+        #[cfg(target_os = "windows")]
+        let mut cmd = {
+            let mut c = Command::new("openssl");
+            c.args(["s_client", "-connect", &addr, "-servername", &host,
+                    "-showcerts", "-brief"])
+             .stdin(std::process::Stdio::null())
+             .creation_flags(CREATE_NO_WINDOW);
+            c
+        };
+        #[cfg(not(target_os = "windows"))]
+        let mut cmd = {
+            let mut c = Command::new("openssl");
+            c.args(["s_client", "-connect", &addr, "-servername", &host,
+                    "-showcerts", "-brief"])
+             .stdin(std::process::Stdio::null());
+            c
+        };
+
+        let out = cmd.output().map_err(|e| format!("openssl not found: {}", e))?;
+        let text = String::from_utf8_lossy(&out.stdout).to_string()
+                 + &String::from_utf8_lossy(&out.stderr);
+
+        // Parse key fields from openssl output
+        let subject     = extract_field(&text, "subject=").unwrap_or_default();
+        let issuer      = extract_field(&text, "issuer=").unwrap_or_default();
+        let not_before  = extract_field(&text, "notBefore=").or_else(|| extract_field(&text, "Not Before:")).unwrap_or_default();
+        let not_after   = extract_field(&text, "notAfter=").or_else(|| extract_field(&text, "Not After :")).unwrap_or_default();
+        let protocol    = extract_field(&text, "Protocol  :").or_else(|| extract_field(&text, "New, ")).unwrap_or_default();
+        let cipher      = extract_field(&text, "Cipher    :").or_else(|| extract_field(&text, "Cipher is ")).unwrap_or_default();
+        let serial      = extract_field(&text, "serial=").or_else(|| extract_field(&text, "Serial Number:")).unwrap_or_default();
+        let fingerprint = extract_field(&text, "SHA256 Fingerprint=").or_else(|| extract_field(&text, "SHA-256")).unwrap_or_default();
+
+        // Parse SANs
+        let sans: Vec<String> = text.lines()
+            .find(|l| l.contains("DNS:"))
+            .map(|l| l.split(',')
+                .map(|s| s.trim().trim_start_matches("DNS:").to_string())
+                .filter(|s| !s.is_empty())
+                .collect())
+            .unwrap_or_default();
+
+        // Calculate days left from notAfter
+        let days_left = parse_ssl_date(&not_after)
+            .map(|exp| {
+                let now = std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap_or_default()
+                    .as_secs() as i64;
+                (exp - now) / 86400
+            })
+            .unwrap_or(0);
+
+        Ok(SslCertInfo {
+            subject, issuer, not_before, not_after, days_left,
+            sans, serial, fingerprint, protocol, cipher,
+        })
+    })
+    .await
+    .map_err(|e| format!("Thread error: {}", e))?
+}
+
+fn extract_field(text: &str, key: &str) -> Option<String> {
+    text.lines()
+        .find(|l| l.contains(key))
+        .map(|l| l[l.find(key).unwrap() + key.len()..].trim().to_string())
+}
+
+fn parse_ssl_date(s: &str) -> Option<i64> {
+    // Try to parse openssl date format "MMM DD HH:MM:SS YYYY GMT"
+    // or ISO-like "YYYY-MM-DD"
+    let months = ["Jan","Feb","Mar","Apr","May","Jun",
+                  "Jul","Aug","Sep","Oct","Nov","Dec"];
+    let parts: Vec<&str> = s.split_whitespace().collect();
+    if parts.len() >= 4 {
+        if let Some(mi) = months.iter().position(|&m| m == parts[0]) {
+            let day:  i64 = parts[1].parse().ok()?;
+            let year: i64 = parts.iter().find(|p| p.len() == 4)?.parse().ok()?;
+            // Approximate timestamp (good enough for day-count)
+            let days_since_epoch = (year - 1970) * 365 + (year - 1969) / 4
+                + mi as i64 * 30 + day;
+            return Some(days_since_epoch * 86400);
+        }
+    }
+    None
+}
+
+// ── HTTP Header Inspector ─────────────────────────────────────────────────────
+
+#[derive(Serialize)]
+pub struct HttpInspectResult {
+    pub url:            String,
+    pub status:         u16,
+    pub status_text:    String,
+    pub protocol:       String,
+    pub headers:        Vec<(String, String)>,
+    pub redirects:      Vec<RedirectHop>,
+    pub timing_ms:      u64,
+    pub security_score: u8,
+    pub security_notes: Vec<String>,
+}
+
+#[derive(Serialize, Clone)]
+pub struct RedirectHop {
+    pub url:    String,
+    pub status: u16,
+}
+
+/// Fetch HTTP headers and follow redirects, reporting security score.
+/// Uses curl (available on Windows 10+, macOS, Linux).
+#[command]
+async fn http_inspect(url: String) -> Result<HttpInspectResult, String> {
+    // Basic URL validation
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err("URL must start with http:// or https://".to_string());
+    }
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let start = std::time::Instant::now();
+
+        #[cfg(target_os = "windows")]
+        let out = Command::new("curl")
+            .args(["-sI", "--max-redirs", "10", "-L", "--write-out",
+                   "\n---CURL-INFO---\n%{http_code}\n%{url_effective}\n%{redirect_url}",
+                   &url])
+            .creation_flags(CREATE_NO_WINDOW)
+            .output()
+            .map_err(|e| format!("curl not found: {}", e))?;
+
+        #[cfg(not(target_os = "windows"))]
+        let out = Command::new("curl")
+            .args(["-sI", "--max-redirs", "10", "-L", "--write-out",
+                   "\n---CURL-INFO---\n%{http_code}\n%{url_effective}\n%{redirect_url}",
+                   &url])
+            .output()
+            .map_err(|e| format!("curl not found: {}", e))?;
+
+        let timing_ms = start.elapsed().as_millis() as u64;
+        let raw = String::from_utf8_lossy(&out.stdout).to_string();
+
+        // Split into header blocks (each redirect has its own HTTP/ block)
+        let blocks: Vec<&str> = raw.split("\n\n").collect();
+        let mut redirects: Vec<RedirectHop> = Vec::new();
+        let mut final_status: u16 = 0;
+        let mut final_headers: Vec<(String, String)> = Vec::new();
+        let mut protocol = String::new();
+        let mut status_text = String::new();
+
+        for (bi, block) in blocks.iter().enumerate() {
+            let lines: Vec<&str> = block.lines().collect();
+            if lines.is_empty() { continue; }
+
+            // Status line: HTTP/1.1 200 OK
+            if lines[0].starts_with("HTTP/") {
+                let parts: Vec<&str> = lines[0].splitn(3, ' ').collect();
+                let status: u16 = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(0);
+                let stext = parts.get(2).map(|s| s.to_string()).unwrap_or_default();
+                let proto = parts.first().map(|s| s.to_string()).unwrap_or_default();
+
+                // Intermediate redirect
+                if status >= 300 && status < 400 {
+                    let loc = lines.iter()
+                        .find(|l| l.to_lowercase().starts_with("location:"))
+                        .map(|l| l[9..].trim().to_string())
+                        .unwrap_or_default();
+                    redirects.push(RedirectHop { url: loc, status });
+                } else {
+                    final_status = status;
+                    status_text  = stext;
+                    protocol     = proto;
+                    final_headers = lines[1..].iter()
+                        .filter_map(|l| {
+                            let ci = l.find(':')?;
+                            Some((l[..ci].trim().to_string(), l[ci+1..].trim().to_string()))
+                        })
+                        .collect();
+                }
+            }
+        }
+
+        // Security score
+        let (score, notes) = score_headers(&final_headers);
+
+        Ok(HttpInspectResult {
+            url:            url.clone(),
+            status:         final_status,
+            status_text,
+            protocol,
+            headers:        final_headers,
+            redirects,
+            timing_ms,
+            security_score: score,
+            security_notes: notes,
+        })
+    })
+    .await
+    .map_err(|e| format!("Thread error: {}", e))?
+}
+
+fn score_headers(headers: &[(String, String)]) -> (u8, Vec<String>) {
+    let mut score: i32 = 100;
+    let mut notes = Vec::new();
+    let hmap: std::collections::HashMap<String, &str> = headers.iter()
+        .map(|(k, v)| (k.to_lowercase(), v.as_str()))
+        .collect();
+
+    let checks: &[(&str, i32, &str)] = &[
+        ("strict-transport-security", 20, "Missing HSTS — downgrade attacks possible"),
+        ("content-security-policy",   15, "Missing CSP — XSS risk"),
+        ("x-frame-options",           10, "Missing X-Frame-Options — clickjacking risk"),
+        ("x-content-type-options",    10, "Missing X-Content-Type-Options"),
+        ("referrer-policy",            5, "Missing Referrer-Policy"),
+        ("permissions-policy",         5, "Missing Permissions-Policy"),
+    ];
+    for (header, penalty, note) in checks {
+        if !hmap.contains_key(*header) {
+            score -= penalty;
+            notes.push(note.to_string());
+        }
+    }
+    if let Some(v) = hmap.get("x-powered-by") {
+        score -= 5;
+        notes.push(format!("X-Powered-By exposes server info: {}", v));
+    }
+    if let Some(v) = hmap.get("server") {
+        if v.len() > 7 { // bare "Server:" ok, detailed version not ok
+            score -= 5;
+            notes.push(format!("Server header exposes version info: {}", v));
+        }
+    }
+    (score.max(0) as u8, notes)
+}
+
+// ── Wake on LAN ───────────────────────────────────────────────────────────────
+
+/// Send a Wake-on-LAN magic packet to the given MAC address.
+/// Broadcasts a UDP packet to 255.255.255.255:9 containing the magic payload.
+#[command]
+fn wake_on_lan(mac: String) -> Result<String, String> {
+    use std::net::UdpSocket;
+
+    // Parse MAC: accept XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX
+    let clean: String = mac.chars().filter(|c| c.is_ascii_hexdigit()).collect();
+    if clean.len() != 12 {
+        return Err(format!("Invalid MAC address: {}", mac));
+    }
+    let bytes: Vec<u8> = (0..6)
+        .map(|i| u8::from_str_radix(&clean[i*2..i*2+2], 16)
+            .map_err(|e| format!("MAC parse error: {}", e)))
+        .collect::<Result<Vec<_>, _>>()?;
+
+    // Magic packet: 6× 0xFF then 16× MAC
+    let mut packet = vec![0xFF_u8; 6];
+    for _ in 0..16 { packet.extend_from_slice(&bytes); }
+
+    let sock = UdpSocket::bind("0.0.0.0:0").map_err(|e| e.to_string())?;
+    sock.set_broadcast(true).map_err(|e| e.to_string())?;
+    sock.send_to(&packet, "255.255.255.255:9").map_err(|e| e.to_string())?;
+
+    Ok(format!("Magic packet sent to {}", mac))
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -540,7 +834,10 @@ pub fn run() {
             scan_ports,
             mtr_probe,
             arp_scan,
-            get_local_ip
+            get_local_ip,
+            ssl_inspect,
+            http_inspect,
+            wake_on_lan
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
