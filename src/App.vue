@@ -9,39 +9,36 @@
 <div v-else style="height:100vh;display:flex;flex-direction:column;overflow:hidden;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
 
   <!-- ── Browser-style tab bar ─────────────────────────────────────────── -->
-  <div style="display:flex;align-items:stretch;background:#060d18;border-bottom:1px solid #1e3a5f;flex-shrink:0;padding:0;overflow-x:auto;scrollbar-width:none;min-height:36px">
+  <div style="display:flex;align-items:stretch;background:#060d18;border-bottom:1px solid #1e3a5f;flex-shrink:0;min-height:36px;overflow:hidden">
 
-    <!-- Open tabs -->
-    <div v-for="tab in openTabs" :key="tab.type"
-      @click="activeType = tab.type; showHome = false"
-      :style="`display:flex;align-items:center;gap:7px;padding:0 12px 0 14px;
-        min-width:120px;max-width:180px;border-right:1px solid #1e3a5f;cursor:pointer;flex-shrink:0;
-        background:${isActive(tab.type) ? '#0a0f1e' : 'transparent'};
-        border-bottom:2px solid ${isActive(tab.type) ? '#38bdf8' : 'transparent'};
-        transition:background 0.1s`">
-      <span style="font-size:13px;line-height:1">{{ tab.icon }}</span>
-      <span :style="`font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-        color:${isActive(tab.type) ? '#e2e8f0' : '#64748b'}`">
-        {{ tab.label }}
-      </span>
-      <!-- Close button -->
-      <span @click.stop="closeTab(tab.type)"
-        style="font-size:13px;color:#334155;cursor:pointer;padding:2px 2px;line-height:1;flex-shrink:0;border-radius:3px;transition:color 0.1s"
-        @mouseenter="e => e.target.style.color='#94a3b8'"
-        @mouseleave="e => e.target.style.color='#334155'">
-        ×
-      </span>
+    <!-- Scrollable open-tabs area — tabs shrink, + always visible -->
+    <div style="display:flex;align-items:stretch;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none">
+      <div v-for="tab in openTabs" :key="tab.type"
+        @click="activeType = tab.type; showHome = false"
+        :style="`display:flex;align-items:center;gap:6px;padding:0 8px 0 10px;
+          min-width:90px;max-width:150px;border-right:1px solid #1e3a5f;cursor:pointer;flex-shrink:0;
+          background:${isActive(tab.type) ? '#0a0f1e' : 'transparent'};
+          border-bottom:2px solid ${isActive(tab.type) ? '#38bdf8' : 'transparent'};
+          transition:background 0.1s`">
+        <span style="font-size:12px;line-height:1;flex-shrink:0">{{ tab.icon }}</span>
+        <span :style="`font-size:11px;font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+          color:${isActive(tab.type) ? '#e2e8f0' : '#64748b'}`">
+          {{ tab.label }}
+        </span>
+        <span @click.stop="closeTab(tab.type)"
+          style="font-size:13px;color:#334155;cursor:pointer;padding:1px;line-height:1;flex-shrink:0;border-radius:3px;transition:color 0.1s"
+          @mouseenter="e => e.target.style.color='#94a3b8'"
+          @mouseleave="e => e.target.style.color='#334155'">×</span>
+      </div>
     </div>
 
-    <!-- New tab (+) button -->
+    <!-- New tab (+) — always pinned to the right -->
     <button @click="showHome = true; activeType = null"
-      :style="`padding:0 14px;background:${showHome ? '#0a1628' : 'none'};border:none;
-        border-right:1px solid #1e3a5f;border-bottom:2px solid ${showHome ? '#38bdf8' : 'transparent'};
+      :style="`padding:0 12px;background:${showHome ? '#0a1628' : 'none'};border:none;border-left:1px solid #1e3a5f;
+        border-bottom:2px solid ${showHome ? '#38bdf8' : 'transparent'};
         color:${showHome ? '#38bdf8' : '#475569'};font-size:18px;cursor:pointer;flex-shrink:0;
         transition:color 0.1s;line-height:1`"
-      title="New tab">
-      +
-    </button>
+      title="New tab">+</button>
   </div>
 
   <!-- ── Update banner ─────────────────────────────────────────────────── -->

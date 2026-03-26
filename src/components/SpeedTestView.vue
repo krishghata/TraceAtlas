@@ -91,41 +91,61 @@
     </div>
   </div>
 
-  <!-- ── Live chart ──────────────────────────────────────────────────────── -->
-  <div style="flex:1;background:#0d1b2a;border-radius:8px;border:1px solid #1e3a5f;overflow:hidden;position:relative;min-height:100px">
-    <div v-if="!samples.length" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#334155;font-size:13px">
-      Press Start Test to measure your connection speed
+  <!-- ── Charts (download + upload side by side) ─────────────────────────── -->
+  <div style="flex:1;display:flex;gap:10px;min-height:0">
+
+    <!-- Download chart -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0">
+      <div style="font-size:10px;font-weight:600;color:#38bdf8;text-transform:uppercase;letter-spacing:0.07em;flex-shrink:0">
+        ↓ Download
+      </div>
+      <div style="flex:1;background:#0d1b2a;border-radius:8px;border:1px solid #1e3a5f;overflow:hidden;position:relative;min-height:80px">
+        <div v-if="!dlSamples.length" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#334155;font-size:12px">
+          {{ phase === 'idle' ? 'Run test' : phase === 'download' ? 'Measuring…' : '—' }}
+        </div>
+        <svg v-else viewBox="0 0 400 100" preserveAspectRatio="none" style="width:100%;height:100%;display:block">
+          <defs>
+            <linearGradient id="dl-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line v-for="g in dlGridLines" :key="g.y" x1="32" :y1="g.y" x2="400" :y2="g.y" stroke="#1e3a5f" stroke-width="0.7"/>
+          <text v-for="g in dlGridLines" :key="'dl'+g.y" x="28" :y="g.y+3" text-anchor="end" fill="#334155" font-size="8" font-family="monospace">{{ g.label }}</text>
+          <path v-if="dlAreaPath" :d="dlAreaPath" fill="url(#dl-grad)"/>
+          <path v-if="dlLinePath" :d="dlLinePath" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
     </div>
-    <svg v-else viewBox="0 0 600 140" preserveAspectRatio="none" style="width:100%;height:100%;display:block">
-      <defs>
-        <linearGradient id="dl-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#38bdf8" stop-opacity="0"/>
-        </linearGradient>
-        <linearGradient id="ul-grad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/>
-          <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
-        </linearGradient>
-      </defs>
-      <!-- Grid -->
-      <line v-for="g in chartGridLines" :key="g.y" x1="40" :y1="g.y" x2="600" :y2="g.y"
-        stroke="#1e3a5f" stroke-width="0.7"/>
-      <text v-for="g in chartGridLines" :key="'l'+g.y" x="36" :y="g.y + 3"
-        text-anchor="end" fill="#334155" font-size="8" font-family="monospace">{{ g.label }}</text>
-      <!-- Download area + line -->
-      <path v-if="dlAreaPath" :d="dlAreaPath" fill="url(#dl-grad)"/>
-      <path v-if="dlLinePath" :d="dlLinePath" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linejoin="round"/>
-      <!-- Upload area + line -->
-      <path v-if="ulAreaPath" :d="ulAreaPath" fill="url(#ul-grad)"/>
-      <path v-if="ulLinePath" :d="ulLinePath" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linejoin="round"/>
-    </svg>
+
+    <!-- Upload chart -->
+    <div style="flex:1;display:flex;flex-direction:column;gap:4px;min-width:0">
+      <div style="font-size:10px;font-weight:600;color:#a78bfa;text-transform:uppercase;letter-spacing:0.07em;flex-shrink:0">
+        ↑ Upload
+      </div>
+      <div style="flex:1;background:#0d1b2a;border-radius:8px;border:1px solid #1e3a5f;overflow:hidden;position:relative;min-height:80px">
+        <div v-if="!ulSamples.length" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#334155;font-size:12px">
+          {{ phase === 'idle' ? 'Run test' : phase === 'upload' ? 'Measuring…' : '—' }}
+        </div>
+        <svg v-else viewBox="0 0 400 100" preserveAspectRatio="none" style="width:100%;height:100%;display:block">
+          <defs>
+            <linearGradient id="ul-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#a78bfa" stop-opacity="0.3"/>
+              <stop offset="100%" stop-color="#a78bfa" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <line v-for="g in ulGridLines" :key="g.y" x1="32" :y1="g.y" x2="400" :y2="g.y" stroke="#1e3a5f" stroke-width="0.7"/>
+          <text v-for="g in ulGridLines" :key="'ul'+g.y" x="28" :y="g.y+3" text-anchor="end" fill="#334155" font-size="8" font-family="monospace">{{ g.label }}</text>
+          <path v-if="ulAreaPath" :d="ulAreaPath" fill="url(#ul-grad)"/>
+          <path v-if="ulLinePath" :d="ulLinePath" fill="none" stroke="#a78bfa" stroke-width="1.5" stroke-linejoin="round"/>
+        </svg>
+      </div>
+    </div>
   </div>
 
-  <!-- ── Legend ──────────────────────────────────────────────────────────── -->
-  <div style="display:flex;gap:20px;flex-shrink:0;font-size:11px;color:#475569;padding:0 2px">
-    <span><span style="color:#38bdf8">●</span> Download (Mbps)</span>
-    <span><span style="color:#a78bfa">●</span> Upload (Mbps)</span>
-    <span v-if="results.server" style="margin-left:auto;color:#334155">via {{ results.server }}</span>
+  <!-- ── Footer ──────────────────────────────────────────────────────────── -->
+  <div v-if="results.server" style="flex-shrink:0;font-size:11px;color:#334155;text-align:right">
+    via {{ results.server }}
   </div>
 
 </div>
@@ -185,58 +205,52 @@ const pingLabel = computed(() => {
 const downArcD = computed(() => arcDasharray(liveDown.value, 500))
 const upArcD   = computed(() => arcDasharray(liveUp.value,   200))
 
-// ── Chart computeds ───────────────────────────────────────────────────────────
-const CH_W = 600, CH_H = 140, CH_PL = 40, CH_PB = 8, CH_PT = 8
+// ── Separate dl/ul sample arrays ──────────────────────────────────────────────
+const dlSamples = computed(() => samples.value.filter(s => s.dl > 0))
+const ulSamples = computed(() => samples.value.filter(s => s.ul > 0))
+
+// ── Chart helpers (separate for each chart) ───────────────────────────────────
+const CH_W = 400, CH_H = 100, CH_PL = 32, CH_PB = 6, CH_PT = 6
 const CH_IW = CH_W - CH_PL
 const CH_IH = CH_H - CH_PB - CH_PT
 
-const maxSample = computed(() => {
-  const vals = samples.value.flatMap(s => [s.dl, s.ul]).filter(v => v > 0)
-  return vals.length ? Math.max(10, Math.max(...vals) * 1.2) : 100
-})
-
-const chartGridLines = computed(() => {
-  const m = maxSample.value
-  return [0.25, 0.5, 0.75, 1].map(f => ({
+function makeGridLines(maxVal) {
+  return [0.33, 0.66, 1].map(f => ({
     y:     CH_PT + CH_IH - f * CH_IH,
-    label: Math.round(m * f),
+    label: Math.round(maxVal * f),
   }))
-})
+}
 
-function sampleX(i) { return CH_PL + (i / Math.max(samples.value.length - 1, 1)) * CH_IW }
-function sampleY(v) { return CH_PT + CH_IH - Math.min(v / maxSample.value, 1) * CH_IH }
-
-const dlLinePath = computed(() => {
+function makeLinePath(pts, maxVal) {
+  if (!pts.length) return null
   let d = ''
-  samples.value.forEach((s, i) => {
-    if (s.dl <= 0) return
-    d += (d === '' ? 'M' : 'L') + `${sampleX(i)},${sampleY(s.dl)} `
+  pts.forEach((v, i) => {
+    const x = CH_PL + (i / Math.max(pts.length - 1, 1)) * CH_IW
+    const y = CH_PT + CH_IH - Math.min(v / maxVal, 1) * CH_IH
+    d += (d === '' ? 'M' : 'L') + `${x},${y} `
   })
   return d || null
-})
+}
 
-const dlAreaPath = computed(() => {
-  const base = CH_PT + CH_IH
-  const pts  = samples.value.map((s, i) => s.dl > 0 ? { x: sampleX(i), y: sampleY(s.dl) } : null).filter(Boolean)
+function makeAreaPath(pts, maxVal) {
   if (pts.length < 2) return null
-  return `M${pts[0].x},${base} ` + pts.map(p => `L${p.x},${p.y}`).join(' ') + ` L${pts[pts.length-1].x},${base} Z`
-})
-
-const ulLinePath = computed(() => {
-  let d = ''
-  samples.value.forEach((s, i) => {
-    if (s.ul <= 0) return
-    d += (d === '' ? 'M' : 'L') + `${sampleX(i)},${sampleY(s.ul)} `
-  })
-  return d || null
-})
-
-const ulAreaPath = computed(() => {
   const base = CH_PT + CH_IH
-  const pts  = samples.value.map((s, i) => s.ul > 0 ? { x: sampleX(i), y: sampleY(s.ul) } : null).filter(Boolean)
-  if (pts.length < 2) return null
-  return `M${pts[0].x},${base} ` + pts.map(p => `L${p.x},${p.y}`).join(' ') + ` L${pts[pts.length-1].x},${base} Z`
-})
+  const mapped = pts.map((v, i) => ({
+    x: CH_PL + (i / Math.max(pts.length - 1, 1)) * CH_IW,
+    y: CH_PT + CH_IH - Math.min(v / maxVal, 1) * CH_IH,
+  }))
+  return `M${mapped[0].x},${base} ` + mapped.map(p => `L${p.x},${p.y}`).join(' ')
+       + ` L${mapped[mapped.length-1].x},${base} Z`
+}
+
+const dlMax      = computed(() => Math.max(10, ...dlSamples.value.map(s => s.dl)) * 1.2)
+const ulMax      = computed(() => Math.max(10, ...ulSamples.value.map(s => s.ul)) * 1.2)
+const dlGridLines = computed(() => makeGridLines(dlMax.value))
+const ulGridLines = computed(() => makeGridLines(ulMax.value))
+const dlLinePath  = computed(() => makeLinePath(dlSamples.value.map(s => s.dl), dlMax.value))
+const dlAreaPath  = computed(() => makeAreaPath(dlSamples.value.map(s => s.dl), dlMax.value))
+const ulLinePath  = computed(() => makeLinePath(ulSamples.value.map(s => s.ul), ulMax.value))
+const ulAreaPath  = computed(() => makeAreaPath(ulSamples.value.map(s => s.ul), ulMax.value))
 
 // ── Test logic ────────────────────────────────────────────────────────────────
 

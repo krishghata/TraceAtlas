@@ -439,8 +439,26 @@ fn mac_vendor(mac: &str) -> (&'static str, &'static str) {
         "606BFF"|"7845C4"|"985FD3"|"60457F"                   => ("Microsoft",     "PC/Xbox"),
         // Sony (PlayStation, TV)
         "000D4B"|"001315"|"00D9D1"|"F8D0AC"                   => ("Sony",          "PlayStation/TV"),
-        _ => ("Unknown", "Device"),
+        _ => ("Unknown", "Unknown"),
     }
+}
+
+/// Return false for multicast / broadcast IPs and MACs that shouldn't appear as real devices.
+fn is_unicast_device(ip: &str, mac: &str) -> bool {
+    // Multicast/broadcast MAC: first byte odd (multicast bit) or all-FF (broadcast)
+    let first_byte = mac.splitn(2, |c| c == '-' || c == ':')
+        .next()
+        .and_then(|s| u8::from_str_radix(s, 16).ok())
+        .unwrap_or(1);
+    if first_byte & 1 != 0 { return false; }
+
+    // Multicast/broadcast IP
+    let parts: Vec<u8> = ip.split('.').filter_map(|p| p.parse().ok()).collect();
+    if parts.len() != 4 { return false; }
+    if parts[0] >= 224 { return false; }      // 224-255 multicast/broadcast
+    if parts[3] == 255 { return false; }      // subnet broadcast
+    if parts[0] == 169 && parts[1] == 254 { return false; }  // link-local
+    true
 }
 
 fn parse_arp_output(text: &str) -> Vec<NetworkDevice> {
@@ -488,7 +506,8 @@ fn parse_arp_output(text: &str) -> Vec<NetworkDevice> {
             }
         }
     }
-    // Deduplicate by IP
+    // Filter out multicast/broadcast addresses, then deduplicate by IP
+    devices.retain(|d| is_unicast_device(&d.ip, &d.mac));
     let mut seen = std::collections::HashSet::new();
     devices.retain(|d| seen.insert(d.ip.clone()));
     devices
@@ -543,7 +562,8 @@ pub struct SslCertInfo {
 }
 
 /// Inspect the TLS certificate of a host (port defaults to 443).
-/// Uses openssl s_client (cross-platform) to retrieve certificate info.
+/// Windows: uses PowerShell .NET SslStream — no openssl required.
+/// Unix: uses openssl s_client.
 #[command]
 async fn ssl_inspect(host: String, port: Option<u16>) -> Result<SslCertInfo, String> {
     let valid = host.chars().all(|c| c.is_alphanumeric() || c == '.' || c == '-');
@@ -551,78 +571,115 @@ async fn ssl_inspect(host: String, port: Option<u16>) -> Result<SslCertInfo, Str
         return Err("Invalid host".to_string());
     }
     let port = port.unwrap_or(443);
-    let addr = format!("{}:{}", host, port);
 
     tauri::async_runtime::spawn_blocking(move || {
-
-        // Fetch raw certificate via openssl s_client
-        #[cfg(target_os = "windows")]
-        let mut cmd = {
-            let mut c = Command::new("openssl");
-            c.args(["s_client", "-connect", &addr, "-servername", &host,
-                    "-showcerts", "-brief"])
-             .stdin(std::process::Stdio::null())
-             .creation_flags(CREATE_NO_WINDOW);
-            c
-        };
-        #[cfg(not(target_os = "windows"))]
-        let mut cmd = {
-            let mut c = Command::new("openssl");
-            c.args(["s_client", "-connect", &addr, "-servername", &host,
-                    "-showcerts", "-brief"])
-             .stdin(std::process::Stdio::null());
-            c
-        };
-
-        let out = cmd.output().map_err(|e| format!("openssl not found: {}", e))?;
-        let text = String::from_utf8_lossy(&out.stdout).to_string()
-                 + &String::from_utf8_lossy(&out.stderr);
-
-        // Parse key fields from openssl output
-        let subject     = extract_field(&text, "subject=").unwrap_or_default();
-        let issuer      = extract_field(&text, "issuer=").unwrap_or_default();
-        let not_before  = extract_field(&text, "notBefore=").or_else(|| extract_field(&text, "Not Before:")).unwrap_or_default();
-        let not_after   = extract_field(&text, "notAfter=").or_else(|| extract_field(&text, "Not After :")).unwrap_or_default();
-        let protocol    = extract_field(&text, "Protocol  :").or_else(|| extract_field(&text, "New, ")).unwrap_or_default();
-        let cipher      = extract_field(&text, "Cipher    :").or_else(|| extract_field(&text, "Cipher is ")).unwrap_or_default();
-        let serial      = extract_field(&text, "serial=").or_else(|| extract_field(&text, "Serial Number:")).unwrap_or_default();
-        let fingerprint = extract_field(&text, "SHA256 Fingerprint=").or_else(|| extract_field(&text, "SHA-256")).unwrap_or_default();
-
-        // Parse SANs
-        let sans: Vec<String> = text.lines()
-            .find(|l| l.contains("DNS:"))
-            .map(|l| l.split(',')
-                .map(|s| s.trim().trim_start_matches("DNS:").to_string())
-                .filter(|s| !s.is_empty())
-                .collect())
-            .unwrap_or_default();
-
-        // Calculate days left from notAfter
-        let days_left = parse_ssl_date(&not_after)
-            .map(|exp| {
-                let now = std::time::SystemTime::now()
-                    .duration_since(std::time::UNIX_EPOCH)
-                    .unwrap_or_default()
-                    .as_secs() as i64;
-                (exp - now) / 86400
-            })
-            .unwrap_or(0);
-
-        Ok(SslCertInfo {
-            subject, issuer, not_before, not_after, days_left,
-            sans, serial, fingerprint, protocol, cipher,
-        })
+        ssl_inspect_impl(host, port)
     })
     .await
     .map_err(|e| format!("Thread error: {}", e))?
 }
 
+#[cfg(target_os = "windows")]
+fn ssl_inspect_impl(host: String, port: u16) -> Result<SslCertInfo, String> {
+    // One-liner PowerShell script that uses .NET SslStream — built into every Windows 10+
+    let script = format!(
+        r#"$ErrorActionPreference='Stop';try{{$tcp=New-Object Net.Sockets.TcpClient('{h}',{p});$ssl=New-Object Net.Security.SslStream($tcp.GetStream(),$false,{{$true}});$ssl.AuthenticateAsClient('{h}');$c=New-Object Security.Cryptography.X509Certificates.X509Certificate2($ssl.RemoteCertificate);'SUBJECT='+$c.Subject;'ISSUER='+$c.Issuer;'NOTBEFORE='+$c.NotBefore.ToString('yyyy-MM-dd');'NOTAFTER='+$c.NotAfter.ToString('yyyy-MM-dd');'DAYSLEFT='+(($c.NotAfter-(Get-Date)).Days);'SERIAL='+$c.SerialNumber;$sha=[Security.Cryptography.SHA256]::Create();'SHA256='+(($sha.ComputeHash($c.RawData)|%{{$_.ToString('X2')}})-join':');$san=$c.Extensions|?{{$_.Oid.FriendlyName -eq 'Subject Alternative Name'}};if($san){{'SAN='+$san.Format(0)}};'PROTO='+$ssl.SslProtocol;'CIPHER='+$ssl.CipherAlgorithm;$ssl.Close();$tcp.Close()}}catch{{'ERR='+$_.Exception.Message}}"#,
+        h = host, p = port
+    );
+    let out = Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &script])
+        .creation_flags(CREATE_NO_WINDOW)
+        .output()
+        .map_err(|e| format!("PowerShell error: {}", e))?;
+
+    let text = String::from_utf8_lossy(&out.stdout).to_string();
+    if let Some(err) = text.lines().find(|l| l.starts_with("ERR=")) {
+        return Err(err.trim_start_matches("ERR=").to_string());
+    }
+
+    fn get(t: &str, key: &str) -> String {
+        t.lines().find(|l| l.starts_with(key))
+            .map(|l| l[key.len()..].trim().to_string())
+            .unwrap_or_default()
+    }
+
+    let not_after  = get(&text, "NOTAFTER=");
+    let days_left: i64 = get(&text, "DAYSLEFT=").parse().unwrap_or(0);
+    let san_raw    = get(&text, "SAN=");
+    let sans: Vec<String> = san_raw
+        .split(',')
+        .map(|s| s.trim().trim_start_matches("DNS:").trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    Ok(SslCertInfo {
+        subject:     get(&text, "SUBJECT="),
+        issuer:      get(&text, "ISSUER="),
+        not_before:  get(&text, "NOTBEFORE="),
+        not_after,
+        days_left,
+        sans,
+        serial:      get(&text, "SERIAL="),
+        fingerprint: get(&text, "SHA256="),
+        protocol:    get(&text, "PROTO="),
+        cipher:      get(&text, "CIPHER="),
+    })
+}
+
+#[cfg(not(target_os = "windows"))]
+fn ssl_inspect_impl(host: String, port: u16) -> Result<SslCertInfo, String> {
+    let addr = format!("{}:{}", host, port);
+    let out = Command::new("openssl")
+        .args(["s_client", "-connect", &addr, "-servername", &host,
+               "-showcerts", "-brief"])
+        .stdin(std::process::Stdio::null())
+        .output()
+        .map_err(|e| format!("openssl not found: {}", e))?;
+    let text = String::from_utf8_lossy(&out.stdout).to_string()
+             + &String::from_utf8_lossy(&out.stderr);
+
+    let not_after  = extract_field(&text, "notAfter=")
+        .or_else(|| extract_field(&text, "Not After :"))
+        .unwrap_or_default();
+    let days_left = parse_ssl_date(&not_after)
+        .map(|exp| {
+            let now = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_secs() as i64;
+            (exp - now) / 86400
+        })
+        .unwrap_or(0);
+    let sans: Vec<String> = text.lines()
+        .find(|l| l.contains("DNS:"))
+        .map(|l| l.split(',')
+            .map(|s| s.trim().trim_start_matches("DNS:").to_string())
+            .filter(|s| !s.is_empty())
+            .collect())
+        .unwrap_or_default();
+
+    Ok(SslCertInfo {
+        subject:     extract_field(&text, "subject=").unwrap_or_default(),
+        issuer:      extract_field(&text, "issuer=").unwrap_or_default(),
+        not_before:  extract_field(&text, "notBefore=").or_else(|| extract_field(&text, "Not Before:")).unwrap_or_default(),
+        not_after,
+        days_left,
+        sans,
+        serial:      extract_field(&text, "serial=").or_else(|| extract_field(&text, "Serial Number:")).unwrap_or_default(),
+        fingerprint: extract_field(&text, "SHA256 Fingerprint=").or_else(|| extract_field(&text, "SHA-256")).unwrap_or_default(),
+        protocol:    extract_field(&text, "Protocol  :").or_else(|| extract_field(&text, "New, ")).unwrap_or_default(),
+        cipher:      extract_field(&text, "Cipher    :").or_else(|| extract_field(&text, "Cipher is ")).unwrap_or_default(),
+    })
+}
+
+#[cfg(not(target_os = "windows"))]
 fn extract_field(text: &str, key: &str) -> Option<String> {
     text.lines()
         .find(|l| l.contains(key))
         .map(|l| l[l.find(key).unwrap() + key.len()..].trim().to_string())
 }
 
+#[cfg(not(target_os = "windows"))]
 fn parse_ssl_date(s: &str) -> Option<i64> {
     // Try to parse openssl date format "MMM DD HH:MM:SS YYYY GMT"
     // or ISO-like "YYYY-MM-DD"

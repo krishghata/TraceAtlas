@@ -25,7 +25,6 @@
   <!-- ── Error ──────────────────────────────────────────────────────────── -->
   <div v-if="error" style="padding:8px 14px;background:#450a0a;color:#fca5a5;font-size:12px;border-radius:6px;border:1px solid #7f1d1d;flex-shrink:0">
     ⚠ {{ error }}
-    <div style="margin-top:4px;font-size:11px;color:#7f1d1d">Make sure <code>openssl</code> is installed and accessible in PATH.</div>
   </div>
 
   <!-- ── Loading ────────────────────────────────────────────────────────── -->

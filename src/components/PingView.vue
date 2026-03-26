@@ -42,7 +42,7 @@
   </div>
 
   <!-- ── Chart area ──────────────────────────────────────────────────────── -->
-  <div style="flex:1;background:#0d1b2a;border-radius:8px;border:1px solid #1e3a5f;overflow:hidden;position:relative;min-height:120px">
+  <div style="flex:1;background:#0d1b2a;border-radius:8px;border:1px solid #1e3a5f;overflow:hidden;position:relative;min-height:120px;max-height:340px">
     <div v-if="!packets.length" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#334155;font-size:13px">
       Press Start to see the live latency chart
     </div>

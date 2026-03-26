@@ -44,6 +44,14 @@
     ⚠ {{ error }}
   </div>
 
+  <!-- ── Tracing progress ───────────────────────────────────────────────── -->
+  <div v-if="phase === 'tracing'" style="flex-shrink:0">
+    <div style="height:2px;background:#1e3a5f;border-radius:2px;overflow:hidden">
+      <div class="mtr-sweep"></div>
+    </div>
+    <div style="margin-top:6px;font-size:11px;color:#475569">Discovering route to {{ target }}…</div>
+  </div>
+
   <!-- ── Empty state ────────────────────────────────────────────────────── -->
   <div v-if="phase === 'idle' && !hops.length && !error"
     style="flex:1;display:flex;align-items:center;justify-content:center;color:#334155;font-size:13px">
@@ -282,5 +290,15 @@ onUnmounted(() => { running = false })
 @keyframes pulse {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
+}
+.mtr-sweep {
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  animation: mtr-sweep 1.4s ease-in-out infinite;
+}
+@keyframes mtr-sweep {
+  0%   { margin-left: -35%; }
+  100% { margin-left: 135%; }
 }
 </style>

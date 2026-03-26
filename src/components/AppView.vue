@@ -42,6 +42,11 @@
     ⚠ {{ error }}
   </div>
 
+  <!-- ── Tracing progress bar ──────────────────────────────────────────────── -->
+  <div v-if="loading" style="height:2px;background:#0d1b2a;flex-shrink:0;overflow:hidden">
+    <div class="ta-trace-sweep"></div>
+  </div>
+
   <!-- ── Summary bar ──────────────────────────────────────────────────────── -->
   <SummaryPanel :data="data" />
 
@@ -206,3 +211,16 @@ async function screenshot() {
   } catch (e) { console.error('Screenshot failed:', e) }
 }
 </script>
+
+<style scoped>
+.ta-trace-sweep {
+  height: 100%;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, #38bdf8, transparent);
+  animation: ta-sweep 1.4s ease-in-out infinite;
+}
+@keyframes ta-sweep {
+  0%   { margin-left: -35%; }
+  100% { margin-left: 135%; }
+}
+</style>

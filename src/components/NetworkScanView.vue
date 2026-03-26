@@ -70,7 +70,7 @@
   <!-- ── Grid view ──────────────────────────────────────────────────────── -->
   <div v-if="devices.length && view === 'grid'" style="flex:1;overflow-y:auto;min-height:0">
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">
-      <div v-for="dev in devices" :key="dev.ip"
+      <div v-for="dev in enrichedDevices" :key="dev.ip"
         @click="selectedDevice = selectedDevice?.ip === dev.ip ? null : dev"
         :style="`padding:12px 14px;border-radius:8px;border:1px solid ${selectedDevice?.ip===dev.ip?'#38bdf8':'#1e3a5f'};
           background:${selectedDevice?.ip===dev.ip?'#0a1f3a':'#0d1b2a'};cursor:pointer;transition:all 0.15s`">
@@ -97,7 +97,7 @@
         </div>
 
         <!-- MAC -->
-        <div style="font-size:10px;color:#334155;font-family:monospace">{{ dev.mac }}</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">{{ dev.mac }}</div>
 
         <!-- Gateway / Local badge -->
         <div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">
@@ -159,7 +159,7 @@
           <div style="font-size:11px;color:#64748b">{{ selectedDevice.vendor || 'Unknown vendor' }} · {{ selectedDevice.device_type }}</div>
         </div>
         <div v-if="selectedDevice.hostname" style="font-size:12px;color:#94a3b8;font-family:monospace">{{ selectedDevice.hostname }}</div>
-        <div style="font-size:11px;color:#334155;font-family:monospace">{{ selectedDevice.mac }}</div>
+        <div style="font-size:11px;color:#64748b;font-family:monospace">{{ selectedDevice.mac }}</div>
       </div>
     </div>
   </div>
@@ -202,6 +202,15 @@ const localIp        = ref('')
 const view           = ref('grid')   // 'grid' | 'topology'
 const selectedDevice = ref(null)
 
+// ── Enrich devices with gateway/localIp type hints ────────────────────────────
+const enrichedDevices = computed(() => devices.value.map(d => {
+  if (d.ip === gateway.value && d.device_type === 'Unknown')
+    return { ...d, device_type: 'Router', vendor: d.vendor === 'Unknown' ? 'Gateway' : d.vendor }
+  if (d.ip === localIp.value && d.device_type === 'Unknown')
+    return { ...d, device_type: 'Computer', vendor: d.vendor === 'Unknown' ? 'This Device' : d.vendor }
+  return d
+}))
+
 // ── Device type → emoji ───────────────────────────────────────────────────────
 function deviceIcon(type) {
   const map = {
@@ -223,7 +232,7 @@ function deviceIcon(type) {
 // ── Type count breakdown ──────────────────────────────────────────────────────
 const typeCounts = computed(() => {
   const counts = {}
-  for (const d of devices.value) {
+  for (const d of enrichedDevices.value) {
     const t = d.device_type || 'Unknown'
     counts[t] = (counts[t] ?? 0) + 1
   }
@@ -237,7 +246,7 @@ const topoViewBox = `0 0 ${TOPO_W} ${TOPO_H}`
 const topoCenter  = { x: TOPO_W / 2, y: TOPO_H / 2 }
 
 const topoDevices = computed(() => {
-  const devs = devices.value
+  const devs = enrichedDevices.value
   if (!devs.length) return []
   const count  = devs.length
   const radius = Math.min(Math.max(120, count * 22), 200)
