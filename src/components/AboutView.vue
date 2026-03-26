@@ -31,7 +31,7 @@
   </div>
 
   <!-- ── Divider ─────────────────────────────────────────────────────── -->
-  <div style="height:1px;background:#1e3a5f"/>
+  <div style="height:1px;background:#1e3a5f"></div>
 
   <!-- ── Tools at a glance ───────────────────────────────────────────── -->
   <div>
@@ -46,7 +46,7 @@
   </div>
 
   <!-- ── Divider ─────────────────────────────────────────────────────── -->
-  <div style="height:1px;background:#1e3a5f"/>
+  <div style="height:1px;background:#1e3a5f"></div>
 
   <!-- ── Built with ─────────────────────────────────────────────────── -->
   <div>
@@ -64,7 +64,7 @@
   </div>
 
   <!-- ── Divider ─────────────────────────────────────────────────────── -->
-  <div style="height:1px;background:#1e3a5f"/>
+  <div style="height:1px;background:#1e3a5f"></div>
 
   <!-- ── Author ──────────────────────────────────────────────────────── -->
   <div>
@@ -105,7 +105,7 @@
   </div>
 
   <!-- ── Divider ─────────────────────────────────────────────────────── -->
-  <div style="height:1px;background:#1e3a5f"/>
+  <div style="height:1px;background:#1e3a5f"></div>
 
   <!-- ── License & links ─────────────────────────────────────────────── -->
   <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">
