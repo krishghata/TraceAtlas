@@ -68,8 +68,11 @@
       </div>
       <div style="flex:1;min-width:200px">
         <div style="font-size:15px;font-weight:700;color:#e2e8f0;margin-bottom:4px">Krishnendu Ghata</div>
+        <div style="font-size:11px;color:#38bdf8;font-weight:600;margin-bottom:6px;letter-spacing:0.04em">
+          AI Solution Architect &amp; Software Developer
+        </div>
         <div style="font-size:12px;color:#475569;line-height:1.8">
-          Software developer passionate about developer tools, networking and open-source software.
+          AI Solution Architect with a passion for developer tools, networking, and open-source software.
           TraceAtlas started as a personal tool for diagnosing network issues and grew into a
           full-featured diagnostics suite.
         </div>
