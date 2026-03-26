@@ -1,6 +1,7 @@
 
 <template>
-<div style="flex:1;overflow-y:auto;padding:32px 24px;box-sizing:border-box;background:#0a0f1e">
+<div style="flex:1;overflow:hidden;background:#0a0f1e">
+<div style="flex:1;overflow-y:auto;min-height:0;height:100%;padding:32px 24px;box-sizing:border-box">
 
   <!-- ── Header ──────────────────────────────────────────────────────────── -->
   <div style="text-align:center;margin-bottom:36px">
@@ -46,6 +47,7 @@
     </button>
   </div>
 
+</div>
 </div>
 </template>
 

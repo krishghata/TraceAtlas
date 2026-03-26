@@ -1,6 +1,7 @@
 
 <template>
-<div style="flex:1;display:flex;flex-direction:column;overflow-y:auto;padding:16px;gap:14px;box-sizing:border-box;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
+<div style="flex:1;display:flex;flex-direction:column;overflow:hidden;background:#0a0f1e;color:white;font-family:'Segoe UI',sans-serif">
+<div style="flex:1;overflow-y:auto;min-height:0;padding:16px;gap:14px;display:flex;flex-direction:column;box-sizing:border-box">
 
   <!-- ── Header ──────────────────────────────────────────────────────────── -->
   <div style="display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
@@ -263,6 +264,7 @@
     </div>
 
   </template>
+</div>
 </div>
 </template>
 
